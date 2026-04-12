@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.llm import summarize
+from app.model import predict_fraud
 
 app = FastAPI()
 
@@ -9,7 +10,9 @@ def home():
 
 @app.post("/summarize")
 def summarize_api(data: dict):
-    text = data["text"]
-    result = summarize(text)
+    return {"summary": summarize(data["text"])}
 
-    return {"summary": result}
+@app.post("/predict")
+def predict_api(data: dict):
+    result = predict_fraud(data)
+    return {"fraud_prediction": result}
