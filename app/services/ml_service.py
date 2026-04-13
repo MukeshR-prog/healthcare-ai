@@ -27,4 +27,11 @@ def preprocess_input(data):
 
 def predict_fraud(data):
     processed = preprocess_input(data)
-    return int(model.predict(processed)[0])
+
+    prediction = model.predict(processed)[0]
+    probability = model.predict_proba(processed)[0][1]
+
+    return {
+        "prediction": int(prediction),
+        "confidence": float(probability)
+    }
