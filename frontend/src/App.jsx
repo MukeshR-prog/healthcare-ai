@@ -8,6 +8,8 @@ import Analytics from '@/pages/Analytics'
 import History from '@/pages/History'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
+import ForgotPassword from '@/pages/ForgotPassword'
+import ResetPassword from '@/pages/ResetPassword'
 import Landing from '@/pages/Landing'
 import { Sidebar } from '@/layouts/Sidebar'
 import { Navbar } from '@/layouts/Navbar'
@@ -141,6 +143,22 @@ export default function App() {
         element={
           <PublicRoute>
             <Register />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/forgot-password'
+        element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path='/reset-password'
+        element={
+          <PublicRoute>
+            <ResetPassword />
           </PublicRoute>
         }
       />

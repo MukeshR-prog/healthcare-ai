@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Spinner } from '@/components/ui/spinner'
 import { useApi } from '@/hooks/useApi'
 import { useStore } from '@/store/useStore'
@@ -68,8 +69,7 @@ export default function Register() {
               </div>
               <div className='space-y-1'>
                 <label className='text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400'>Password</label>
-                <Input
-                  type='password'
+                <PasswordInput
                   value={form.password}
                   onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
                   placeholder='At least 8 characters'
@@ -79,8 +79,7 @@ export default function Register() {
               </div>
               <div className='space-y-1'>
                 <label className='text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400'>Confirm Password</label>
-                <Input
-                  type='password'
+                <PasswordInput
                   value={form.confirmPassword}
                   onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
                   placeholder='Repeat password'

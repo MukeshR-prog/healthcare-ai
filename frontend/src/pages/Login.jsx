@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Spinner } from '@/components/ui/spinner'
 import { useApi } from '@/hooks/useApi'
 import { useStore } from '@/store/useStore'
@@ -66,8 +67,7 @@ export default function Login() {
               </div>
               <div className='space-y-1'>
                 <label className='text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400'>Password</label>
-                <Input
-                  type='password'
+                <PasswordInput
                   value={form.password}
                   onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
                   placeholder='At least 8 characters'
@@ -84,6 +84,11 @@ export default function Login() {
                   'Sign In'
                 )}
               </Button>
+              <div className='flex justify-end'>
+                <Link to='/forgot-password' className='text-xs font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400'>
+                  Forgot password?
+                </Link>
+              </div>
             </form>
             <p className='mt-4 text-center text-sm text-slate-500 dark:text-slate-400'>
               New here?{' '}

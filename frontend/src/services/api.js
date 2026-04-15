@@ -30,6 +30,8 @@ api.interceptors.response.use(
 export const healthcareApi = {
   register: (payload) => api.post('/register', payload),
   login: (payload) => api.post('/login', payload),
+  forgotPassword: (payload) => api.post('/forgot-password', payload),
+  resetPassword: (payload) => api.post('/reset-password', payload),
   analyzeClaim: (payload) => api.post('/analyze', payload),
   predictClaim: (payload) => api.post('/predict', payload),
   batchAnalyze: (payload) => api.post('/batch-analyze', payload),

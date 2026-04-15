@@ -80,6 +80,8 @@ def analyze_claim(
         "summary": summary,
         "fraud_prediction": ml_result["prediction"],
         "confidence": ml_result["confidence"],
+        "anomaly_score": ml_result["anomaly_score"],
+        "is_anomalous": ml_result["is_anomalous"],
         "explanation": explanation,
         "claim_id": claim_id,
         "prediction_id": prediction_id,

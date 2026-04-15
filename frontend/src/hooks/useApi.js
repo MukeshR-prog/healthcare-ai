@@ -57,6 +57,22 @@ export function useApi() {
     [setAuth, withLoading],
   )
 
+  const forgotPassword = useCallback(
+    async (payload) => {
+      const response = await withLoading('auth', () => healthcareApi.forgotPassword(payload))
+      return response?.data
+    },
+    [withLoading],
+  )
+
+  const resetPassword = useCallback(
+    async (payload) => {
+      const response = await withLoading('auth', () => healthcareApi.resetPassword(payload))
+      return response?.data
+    },
+    [withLoading],
+  )
+
   const logout = useCallback(() => {
     clearAuth()
   }, [clearAuth])
@@ -106,6 +122,8 @@ export function useApi() {
   return {
     login,
     register,
+    forgotPassword,
+    resetPassword,
     logout,
     fetchAnalytics,
     fetchHistory,
