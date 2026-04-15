@@ -158,6 +158,11 @@ Base URL: `http://127.0.0.1:8000`
   - Input: array of claim objects
   - Output: per-claim prediction results
 
+- `POST /upload-csv`
+  - Protected
+  - Input: CSV file upload
+  - Output: prediction results list for each CSV row
+
 - `GET /analytics`
   - Output: total claims, average claim amount, and fraud cases from CSV
 

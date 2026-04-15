@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
+import csv
+import io
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pydantic import ValidationError
 from pymongo.database import Database
 
 from app.db.connection import get_database
@@ -296,6 +299,64 @@ def batch_analyze(data: list[ClaimCreate], db: Database = Depends(get_database))
         results.append(
             {
                 **ml_result,
+                "claim_id": claim_id,
+                "prediction_id": prediction_id,
+            }
+        )
+
+    return {"results": results}
+
+
+@router.post("/upload-csv")
+async def upload_csv(
+    file: UploadFile = File(...),
+    db: Database = Depends(get_database),
+    current_user: dict = Depends(get_current_user),
+):
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are supported")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    try:
+        decoded_content = content.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="CSV must be UTF-8 encoded") from exc
+
+    reader = csv.DictReader(io.StringIO(decoded_content))
+    if not reader.fieldnames:
+        raise HTTPException(status_code=400, detail="CSV header row is missing")
+
+    results = []
+    for row_index, row in enumerate(reader, start=2):
+        try:
+            claim_input = ClaimCreate(**row)
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid row at line {row_index}: {exc.errors()}",
+            ) from exc
+
+        ml_input = claim_input.to_ml_payload()
+        prediction_result = predict_fraud(ml_input)
+
+        claim_id = save_claim(db, claim_input, user_id=current_user["id"])
+        prediction_id = save_prediction(
+            db,
+            claim_id=claim_id,
+            prediction_value=prediction_result["prediction"],
+            confidence=prediction_result["confidence"],
+            explanation="",
+            summary="",
+            user_id=current_user["id"],
+        )
+
+        results.append(
+            {
+                "fraud_prediction": prediction_result["prediction"],
+                "confidence": prediction_result["confidence"],
                 "claim_id": claim_id,
                 "prediction_id": prediction_id,
             }
