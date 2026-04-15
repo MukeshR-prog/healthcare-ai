@@ -9,7 +9,12 @@ def ensure_collections_and_indexes(db: Database) -> None:
         db.create_collection("claims")
     if "predictions" not in existing:
         db.create_collection("predictions")
+    if "users" not in existing:
+        db.create_collection("users")
 
     db["claims"].create_index("created_at")
+    db["claims"].create_index("user_id")
     db["predictions"].create_index("claim_id")
     db["predictions"].create_index("created_at")
+    db["predictions"].create_index("user_id")
+    db["users"].create_index("email", unique=True)

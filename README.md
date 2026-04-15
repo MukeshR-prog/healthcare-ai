@@ -65,11 +65,17 @@ Create a `.env` file in the project root:
 GROQ_API_KEY=your_groq_api_key_here
 MONGO_URI=mongodb://127.0.0.1:27017
 MONGO_DB_NAME=healthcare_ai
+JWT_SECRET_KEY=change-this-in-production
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+RESET_TOKEN_EXPIRE_MINUTES=30
+RAW_PASSWORD_ENCRYPTION_KEY=optional-separate-key
 ```
 
 Notes:
 - Endpoints that use LLM features (`/summarize`, `/analyze`) require `GROQ_API_KEY`.
 - All claim/prediction persistence endpoints require MongoDB.
+- Protected endpoints require a bearer token from `/register` or `/login`.
 
 ## Backend Setup (FastAPI)
 
@@ -123,6 +129,30 @@ Base URL: `http://127.0.0.1:8000`
 - `POST /analyze`
   - Input: one claim object
   - Output: ML prediction + confidence + LLM explanation + summary
+
+- `POST /register`
+  - Input: `email`, `password`
+  - Output: bearer access token
+
+- `POST /login`
+  - Input: `email`, `password`
+  - Output: bearer access token
+
+- `POST /forgot-password`
+  - Input: `email`
+  - Output: reset token (demo flow)
+
+- `POST /reset-password`
+  - Input: `token`, `new_password`
+  - Output: password reset confirmation
+
+- `GET /history`
+  - Protected
+  - Output: authenticated user's own claim and prediction history
+
+- `GET /history/{id}`
+  - Protected
+  - Output: one claim with full prediction details if owned by current user
 
 - `POST /batch-analyze`
   - Input: array of claim objects

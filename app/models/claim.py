@@ -7,6 +7,7 @@ class Claim(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     id: str | None = Field(default=None, alias="_id")
+    user_id: str | None = None
     provider: str
     age: int
     claim_amount: float
