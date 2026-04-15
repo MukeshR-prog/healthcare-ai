@@ -120,7 +120,7 @@ export default function Dashboard() {
         <ClaimsLineChart data={trendData} />
       </div>
 
-      <RecentClaimsTable rows={claims.slice(0, 8)} />
+      <RecentClaimsTable rows={claims} />
     </section>
   )
 }
