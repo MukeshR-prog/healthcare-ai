@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChartContainer } from '@/components/charts/ChartContainer'
 
 export function ClaimHistogram({ rows = [] }) {
   const buckets = [
@@ -16,11 +16,7 @@ export function ClaimHistogram({ rows = [] }) {
   })
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Claim Amount Histogram</CardTitle>
-      </CardHeader>
-      <CardContent className='h-72'>
+    <ChartContainer title='Claim Amount Histogram'>
         <ResponsiveContainer width='100%' height='100%'>
           <BarChart data={buckets}>
             <XAxis dataKey='range' />
@@ -29,7 +25,6 @@ export function ClaimHistogram({ rows = [] }) {
             <Bar dataKey='value' fill='#0284c7' radius={[8, 8, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    </ChartContainer>
   )
 }

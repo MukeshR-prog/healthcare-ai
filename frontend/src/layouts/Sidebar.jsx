@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Activity, BarChart3, FileUp, LayoutDashboard, ShieldCheck } from 'lucide-react'
+import { Activity, BarChart3, FileUp, History, LayoutDashboard, ShieldCheck } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const items = [
@@ -7,11 +7,12 @@ const items = [
   { to: '/analyze', label: 'Analyze', icon: Activity },
   { to: '/batch-upload', label: 'Batch Upload', icon: FileUp },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { to: '/history', label: 'History', icon: History },
 ]
 
 export function Sidebar() {
   return (
-    <aside className='hidden w-72 shrink-0 border-r border-slate-200/70 bg-white/80 p-5 backdrop-blur lg:block dark:border-slate-800 dark:bg-slate-950/80'>
+    <aside className='sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-slate-200/70 bg-white/80 p-5 backdrop-blur lg:block dark:border-slate-800 dark:bg-slate-950/80'>
       <div className='mb-8 flex items-center gap-3'>
         <div className='grid h-10 w-10 place-items-center rounded-2xl bg-sky-600 text-white'>
           <ShieldCheck className='h-5 w-5' />

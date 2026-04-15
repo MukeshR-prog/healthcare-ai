@@ -163,8 +163,11 @@ Base URL: `http://127.0.0.1:8000`
   - Input: CSV file upload
   - Output: prediction results list for each CSV row
 
+- `GET /model-metrics`
+  - Output: model evaluation metrics (`accuracy`, `precision`, `recall`, `f1_score`), feature importance, and model artifact path
+
 - `GET /analytics`
-  - Output: total claims, average claim amount, and fraud cases from CSV
+  - Output: dashboard analytics including fraud rate, average claim by provider, gender distribution, and high-risk claims count
 
 ## Claim Payload Shape
 

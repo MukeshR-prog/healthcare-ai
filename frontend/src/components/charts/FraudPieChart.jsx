@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChartContainer } from '@/components/charts/ChartContainer'
 
 const COLORS = ['#0ea5e9', '#f43f5e']
 
@@ -14,11 +14,7 @@ export function FraudPieChart({ fraudCases = 0, totalClaims = 0 }) {
   ]
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Fraud Distribution</CardTitle>
-      </CardHeader>
-      <CardContent className='h-72'>
+    <ChartContainer title='Fraud Distribution'>
         <ResponsiveContainer width='100%' height='100%'>
           <PieChart>
             <Pie data={data} dataKey='value' nameKey='name' cx='50%' cy='50%' outerRadius={90} label>
@@ -29,7 +25,6 @@ export function FraudPieChart({ fraudCases = 0, totalClaims = 0 }) {
             <Tooltip />
           </PieChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    </ChartContainer>
   )
 }
