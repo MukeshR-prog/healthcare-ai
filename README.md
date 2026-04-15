@@ -1,68 +1,111 @@
-# Healthcare AI Fraud Detection
+# Healthcare AI Fraud Detection Platform
 
-Full-stack healthcare claims analysis app with:
-- FastAPI backend for ML and LLM-powered analysis
-- React + Vite frontend dashboard for analytics and claim review
-- CSV-based model training data source
-- MongoDB persistence for claims and prediction results
+End-to-end fraud analysis platform for healthcare claims with a FastAPI backend, MongoDB persistence, machine-learning scoring, LLM explanations, and a SaaS-style React dashboard.
 
-## What This Project Does
+## Implemented Features
 
-This project helps analyze healthcare claims and identify potential fraud by combining:
-- A machine learning model (Random Forest) for fraud prediction
-- LLM-generated summaries and explanations for claims
-- A frontend dashboard for single-claim and batch workflows
+### Backend
+- MongoDB-backed persistence for users, claims, and predictions.
+- Modular API routing split by domain:
+  - `app/api/auth_routes.py`
+  - `app/api/claim_routes.py`
+  - `app/api/history_routes.py`
+  - `app/api/analytics_routes.py`
+- JWT authentication and route protection.
+- User-scoped data access (`/analyze`, `/history`, `/history/{id}`, `/upload-csv` return only the authenticated user's data).
+- CSV batch upload and row-by-row prediction ingestion.
+- ML model evaluation endpoint with accuracy, precision, recall, F1 score, feature importance, and model artifact metadata.
+- Enriched analytics endpoint with fraud rate, provider averages, gender distribution, and high-risk counts.
+
+### Frontend
+- Protected app shell with auth flow (`/login`, `/register`) and route guarding.
+- Public marketing landing page (`/`).
+- SaaS dashboard pages:
+  - Dashboard
+  - Analyze claim
+  - Batch upload
+  - Analytics
+  - History
+- Reusable chart/card/table/form component architecture.
+- Table pagination support for key data views.
+- Indian currency formatting (`INR`) in UI display utilities.
+- Theme system with `light`, `dark`, and `system` modes.
+- Fixed desktop sidebar + independently scrollable main content area.
+- Mobile-responsive navigation and layout behavior.
 
 ## Tech Stack
 
-Backend:
-- Python
+### Backend
+- Python 3.11+
 - FastAPI
-- pandas, scikit-learn
-- Groq API (Llama 3.1 model)
-- MongoDB (PyMongo)
+- Pydantic v2
+- PyMongo (MongoDB)
+- scikit-learn, pandas, numpy
+- PyJWT, bcrypt, cryptography
+- Uvicorn
 
-Frontend:
-- React 19
-- Vite
+### Frontend
+- React 19 + Vite
+- React Router
+- Zustand
 - Axios
 - Recharts
-- Zustand
-- Tailwind CSS 4 + Radix UI primitives
+- Tailwind CSS 4
+- Radix UI primitives
+- Framer Motion
 
-## Project Structure
+## Repository Structure
 
 ```text
 app/
-  main.py                # FastAPI app and CORS setup
-  api/routes.py          # API endpoints
-  core/config.py         # Environment/config values
-  db/                    # Mongo connection + collection bootstrap
-  models/                # Database models
-  schemas/               # Request/input schemas
-  services/ml_service.py # Model training and fraud prediction
-  services/llm_service.py# Summary and explanation using Groq
+  main.py
+  api/
+    routes.py              # Router aggregator
+    auth_routes.py
+    claim_routes.py
+    history_routes.py
+    analytics_routes.py
+    route_utils.py         # Shared helpers (save/serialize/history pipeline)
+  core/
+    config.py
+  db/
+    connection.py
+    init_db.py
+  models/
+    user.py
+    claim.py
+    prediction.py
+  schemas/
+    auth.py
+    claim.py
+    prediction.py
+    history.py
+  services/
+    auth_service.py
+    ml_service.py
+    llm_service.py
 
 data/
-  claims.csv             # Training dataset for ML model
+  claims.csv
 
 frontend/
-  src/                   # React app
-  package.json           # Frontend scripts/deps
+  src/
+    App.jsx
+    layouts/
+    pages/
+    components/
+    store/
+    hooks/
+    services/
+    utils/
 ```
-
-## Prerequisites
-
-- Python 3.11+ (recommended)
-- Node.js 18+ and npm
-- A Groq API key
 
 ## Environment Variables
 
-Create a `.env` file in the project root:
+Create a `.env` file in project root:
 
 ```env
-GROQ_API_KEY=your_groq_api_key_here
+GROQ_API_KEY=your_groq_api_key
 MONGO_URI=mongodb://127.0.0.1:27017
 MONGO_DB_NAME=healthcare_ai
 JWT_SECRET_KEY=change-this-in-production
@@ -73,13 +116,13 @@ RAW_PASSWORD_ENCRYPTION_KEY=optional-separate-key
 ```
 
 Notes:
-- Endpoints that use LLM features (`/summarize`, `/analyze`) require `GROQ_API_KEY`.
-- All claim/prediction persistence endpoints require MongoDB.
-- Protected endpoints require a bearer token from `/register` or `/login`.
+- LLM-based endpoints (`/summarize`, `/analyze`) require `GROQ_API_KEY`.
+- Protected endpoints require bearer token from `/register` or `/login`.
+- Ensure MongoDB service is running before backend startup.
 
-## Backend Setup (FastAPI)
+## Local Setup
 
-From the project root:
+### 1) Backend
 
 ```powershell
 python -m venv venv
@@ -88,15 +131,9 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Backend runs at:
-- `http://127.0.0.1:8000`
+Backend URL: `http://127.0.0.1:8000`
 
-Health check:
-- `GET /` returns `{"message": "Healthcare AI API Running"}`
-
-## Frontend Setup (React + Vite)
-
-In a new terminal:
+### 2) Frontend
 
 ```powershell
 cd frontend
@@ -104,114 +141,81 @@ npm install
 npm run dev
 ```
 
-Frontend runs at:
-- `http://localhost:5173`
+Frontend URL: `http://localhost:5173`
 
-The backend CORS policy currently allows:
-- `http://localhost:5173`
-- `http://127.0.0.1:5173`
-
-## API Endpoints
+## API Summary
 
 Base URL: `http://127.0.0.1:8000`
 
 - `GET /`
-  - API status message
-
-- `POST /predict`
-  - Input: one claim object
-  - Output: `fraud_prediction` with `prediction` and `confidence`
-
-- `POST /summarize`
-  - Input: `{ "text": "..." }`
-  - Output: claim summary text from LLM
-
-- `POST /analyze`
-  - Input: one claim object
-  - Output: ML prediction + confidence + LLM explanation + summary
+  - Health/status response.
 
 - `POST /register`
-  - Input: `email`, `password`
-  - Output: bearer access token
-
 - `POST /login`
-  - Input: `email`, `password`
-  - Output: bearer access token
-
 - `POST /forgot-password`
-  - Input: `email`
-  - Output: reset token (demo flow)
-
 - `POST /reset-password`
-  - Input: `token`, `new_password`
-  - Output: password reset confirmation
+  - Authentication and password recovery flow.
 
-- `GET /history`
-  - Protected
-  - Output: authenticated user's own claim and prediction history
+- `POST /predict`
+  - Single claim prediction (unprotected).
 
-- `GET /history/{id}`
-  - Protected
-  - Output: one claim with full prediction details if owned by current user
+- `POST /summarize`
+  - LLM summary for free text.
+
+- `POST /analyze`
+  - Protected single-claim analysis with ML + explanation + summary + persistence.
 
 - `POST /batch-analyze`
-  - Input: array of claim objects
-  - Output: per-claim prediction results
+  - Batch analysis from JSON claim array.
 
 - `POST /upload-csv`
-  - Protected
-  - Input: CSV file upload
-  - Output: prediction results list for each CSV row
+  - Protected CSV upload and batch persistence.
+
+- `GET /history`
+- `GET /history/{id}`
+  - Protected, user-scoped claim/prediction history.
 
 - `GET /model-metrics`
-  - Output: model evaluation metrics (`accuracy`, `precision`, `recall`, `f1_score`), feature importance, and model artifact path
+  - Model performance metrics and feature importance.
 
 - `GET /analytics`
-  - Output: dashboard analytics including fraud rate, average claim by provider, gender distribution, and high-risk claims count
+  - Dashboard analytics aggregates.
 
-## Claim Payload Shape
+## Frontend Routes
 
-Typical claim fields used by the model:
-
-```json
-{
-  "Provider": "C",
-  "Age": 51,
-  "ClaimAmount": 47475,
-  "NumProcedures": 1,
-  "Gender": "F"
-}
-```
-
-## How Prediction Works
-
-1. `data/claims.csv` is loaded at startup.
-2. Categorical columns are one-hot encoded.
-3. RandomForestClassifier is trained in memory.
-4. Incoming claims are transformed to match training columns.
-5. Claims and predictions are persisted to MongoDB (`claims`, `predictions` collections).
-6. Response includes:
-   - `prediction` (0 or 1)
-   - `confidence` (fraud probability)
+- Public:
+  - `/` (landing page)
+  - `/login`
+  - `/register`
+- Protected:
+  - `/dashboard`
+  - `/analyze`
+  - `/batch-upload`
+  - `/analytics`
+  - `/history`
 
 ## Troubleshooting
 
-- If LLM requests fail:
-  - Verify `GROQ_API_KEY` in `.env`
-  - Restart backend after changing environment variables
+- Backend not reachable:
+  - Verify backend is running at port `8000`.
+  - Check frontend API base URL in `frontend/src/services/api.js`.
 
-- If frontend cannot reach backend:
-  - Confirm backend is running on port 8000
-  - Check frontend uses `http://127.0.0.1:8000` (see `frontend/src/services/api.js`)
+- Auth issues (`401/403`):
+  - Ensure token is present and not expired.
+  - Re-login to refresh persisted auth state.
 
-- If PowerShell blocks venv activation:
-  - Run PowerShell as admin and set execution policy if needed:
+- Theme mismatch:
+  - Theme mode is managed in `frontend/src/store/useStore.js` and applied in `frontend/src/App.jsx`.
+
+- PowerShell execution policy blocks venv activation:
   - `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
-## Future Improvements
+## Current Status
 
-- Persist trained model instead of retraining at startup
-- Add request/response schemas with Pydantic models
-- Add model evaluation metrics endpoint
-- Add automated tests for API and frontend integration
-- Support file upload endpoint for batch CSV processing
+This project already includes:
+- database persistence,
+- authentication and protected multi-user flows,
+- batch upload + analytics,
+- production-style frontend shell,
+- responsive design and theming,
+- and model metrics support.

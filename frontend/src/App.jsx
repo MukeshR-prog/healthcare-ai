@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { motion } from 'framer-motion'
 import Dashboard from '@/pages/Dashboard'
 import Analyze from '@/pages/Analyze'
 import BatchUpload from '@/pages/BatchUpload'
@@ -76,20 +75,14 @@ function AppLayout() {
   const location = useLocation()
 
   return (
-    <div className='min-h-screen overflow-x-hidden bg-app text-slate-900 transition-colors dark:text-slate-100'>
-      <div className='absolute inset-0 -z-10 bg-[radial-gradient(circle_at_10%_20%,rgba(14,165,233,0.18),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(2,132,199,0.14),transparent_30%)]' />
-      <div className='flex min-h-screen'>
+    <div className='relative h-dvh overflow-hidden bg-app text-slate-900 transition-colors dark:text-slate-100'>
+      <div className='pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_10%_20%,rgba(14,165,233,0.18),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(2,132,199,0.14),transparent_30%)]' />
+      <div className='flex h-full min-h-0'>
         <Sidebar />
-        <div className='flex min-w-0 flex-1 flex-col'>
+        <div className='flex min-w-0 flex-1 flex-col overflow-hidden lg:pl-72'>
           <Navbar title={pageTitles[location.pathname] || 'Healthcare AI'} />
           <MobileNav />
-          <motion.main
-            key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28 }}
-            className='flex-1 p-4 sm:p-6'
-          >
+          <main key={location.pathname} className='flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6'>
             <Routes>
               <Route path='/dashboard' element={<Dashboard />} />
               <Route path='/analyze' element={<Analyze />} />
@@ -98,7 +91,7 @@ function AppLayout() {
               <Route path='/history' element={<History />} />
               <Route path='*' element={<Navigate to='/dashboard' replace />} />
             </Routes>
-          </motion.main>
+          </main>
         </div>
       </div>
       <Toaster position='top-right' />

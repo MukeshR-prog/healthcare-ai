@@ -12,7 +12,7 @@ const items = [
 
 export function Sidebar() {
   return (
-    <aside className='sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-slate-200/70 bg-white/80 p-5 backdrop-blur lg:block dark:border-slate-800 dark:bg-slate-950/80'>
+    <aside className='fixed inset-y-0 left-0 z-40 hidden h-dvh w-72 overflow-y-auto border-r border-slate-200/70 bg-white/80 p-5 backdrop-blur lg:block dark:border-slate-800 dark:bg-slate-950/80'>
       <div className='mb-8 flex items-center gap-3'>
         <div className='grid h-10 w-10 place-items-center rounded-2xl bg-sky-600 text-white'>
           <ShieldCheck className='h-5 w-5' />
