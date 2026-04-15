@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware'
 export const useStore = create(
   persist(
     (set) => ({
-      theme: 'light',
+      theme: 'system',
       loading: false,
       loadingByKey: {},
       analytics: null,

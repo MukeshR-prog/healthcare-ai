@@ -9,6 +9,7 @@ import Analytics from '@/pages/Analytics'
 import History from '@/pages/History'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
+import Landing from '@/pages/Landing'
 import { Sidebar } from '@/layouts/Sidebar'
 import { Navbar } from '@/layouts/Navbar'
 import { useStore } from '@/store/useStore'
@@ -73,12 +74,6 @@ function MobileNav() {
 
 function AppLayout() {
   const location = useLocation()
-  const theme = useStore((state) => state.theme)
-
-  useEffect(() => {
-    const root = document.documentElement
-    root.classList.toggle('dark', theme === 'dark')
-  }, [theme])
 
   return (
     <div className='min-h-screen overflow-x-hidden bg-app text-slate-900 transition-colors dark:text-slate-100'>
@@ -112,8 +107,34 @@ function AppLayout() {
 }
 
 export default function App() {
+  const theme = useStore((state) => state.theme)
+
+  useEffect(() => {
+    const root = document.documentElement
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+    const resolveDarkMode = () => (theme === 'system' ? mediaQuery.matches : theme === 'dark')
+
+    const applyTheme = () => {
+      const isDark = resolveDarkMode()
+      root.classList.toggle('dark', isDark)
+      root.style.colorScheme = isDark ? 'dark' : 'light'
+    }
+
+    applyTheme()
+
+    if (theme !== 'system') {
+      return undefined
+    }
+
+    const handleSystemThemeChange = () => applyTheme()
+    mediaQuery.addEventListener('change', handleSystemThemeChange)
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange)
+  }, [theme])
+
   return (
     <Routes>
+      <Route path='/' element={<Landing />} />
       <Route
         path='/login'
         element={
