@@ -3,7 +3,8 @@
 Full-stack healthcare claims analysis app with:
 - FastAPI backend for ML and LLM-powered analysis
 - React + Vite frontend dashboard for analytics and claim review
-- CSV-based training and analytics data source
+- CSV-based model training data source
+- MongoDB persistence for claims and prediction results
 
 ## What This Project Does
 
@@ -19,6 +20,7 @@ Backend:
 - FastAPI
 - pandas, scikit-learn
 - Groq API (Llama 3.1 model)
+- MongoDB (PyMongo)
 
 Frontend:
 - React 19
@@ -35,11 +37,14 @@ app/
   main.py                # FastAPI app and CORS setup
   api/routes.py          # API endpoints
   core/config.py         # Environment/config values
+  db/                    # Mongo connection + collection bootstrap
+  models/                # Database models
+  schemas/               # Request/input schemas
   services/ml_service.py # Model training and fraud prediction
   services/llm_service.py# Summary and explanation using Groq
 
 data/
-  claims.csv             # Training + analytics dataset
+  claims.csv             # Training dataset for ML model
 
 frontend/
   src/                   # React app
@@ -58,11 +63,13 @@ Create a `.env` file in the project root:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
+MONGO_URI=mongodb://127.0.0.1:27017
+MONGO_DB_NAME=healthcare_ai
 ```
 
 Notes:
 - Endpoints that use LLM features (`/summarize`, `/analyze`) require `GROQ_API_KEY`.
-- The ML-only endpoints (`/predict`, `/batch-analyze`, `/analytics`) do not require the key.
+- All claim/prediction persistence endpoints require MongoDB.
 
 ## Backend Setup (FastAPI)
 
@@ -144,7 +151,8 @@ Typical claim fields used by the model:
 2. Categorical columns are one-hot encoded.
 3. RandomForestClassifier is trained in memory.
 4. Incoming claims are transformed to match training columns.
-5. Response includes:
+5. Claims and predictions are persisted to MongoDB (`claims`, `predictions` collections).
+6. Response includes:
    - `prediction` (0 or 1)
    - `confidence` (fraud probability)
 
