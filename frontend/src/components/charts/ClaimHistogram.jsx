@@ -16,15 +16,22 @@ export function ClaimHistogram({ rows = [] }) {
   })
 
   return (
-    <ChartContainer title='Claim Amount Histogram'>
-        <ResponsiveContainer width='100%' height='100%'>
-          <BarChart data={buckets}>
-            <XAxis dataKey='range' />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            <Bar dataKey='value' fill='#0284c7' radius={[8, 8, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+    <ChartContainer title='Claim Amount Histogram' subtitle='Claim volume distributed across amount bands'>
+      <ResponsiveContainer width='100%' height='100%'>
+        <BarChart data={buckets} margin={{ top: 8, right: 10, left: -14, bottom: 0 }}>
+          <XAxis dataKey='range' tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
+          <Tooltip
+            contentStyle={{
+              borderRadius: 12,
+              border: '1px solid #cbd5e1',
+              boxShadow: '0 12px 24px rgba(15, 23, 42, 0.12)',
+            }}
+            formatter={(value) => `${Number(value || 0)} claims`}
+          />
+          <Bar dataKey='value' fill='#0284c7' radius={[8, 8, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
     </ChartContainer>
   )
 }
