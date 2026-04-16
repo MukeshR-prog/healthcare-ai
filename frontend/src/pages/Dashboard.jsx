@@ -84,6 +84,14 @@ export default function Dashboard() {
 
   return (
     <section className='space-y-6'>
+      <div className='rounded-2xl border border-slate-200/80 bg-[linear-gradient(to_right,#f0f9ff,#ecfeff,#ffffff)] p-5 shadow-sm dark:border-slate-800 dark:bg-[linear-gradient(to_right,rgba(8,47,73,0.25),rgba(22,78,99,0.2),rgba(2,6,23,0.6))]'>
+        <p className='text-xs font-medium uppercase tracking-[0.16em] text-sky-700 dark:text-sky-300'>Operations Overview</p>
+        <h2 className='mt-2 font-display text-2xl font-semibold tracking-tight'>Fraud Monitoring Command Center</h2>
+        <p className='mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300'>
+          Review risk volume, high-risk concentration, and claim movement trends in one place.
+        </p>
+      </div>
+
       <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
         <MetricCard
           title='Total Claims'
