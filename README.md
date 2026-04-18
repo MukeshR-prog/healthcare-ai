@@ -147,75 +147,230 @@ Frontend URL: `http://localhost:5173`
 
 Base URL: `http://127.0.0.1:8000`
 
-- `GET /`
-  - Health/status response.
+### Authentication Endpoints
 
 - `POST /register`
+  - Create a new user account
+  - Body: `{ "email": "user@example.com", "password": "secret123" }`
+  - Returns: `{ "access_token": "jwt_token", "user_id": "mongo_id", "email": "..." }`
+
 - `POST /login`
+  - Authenticate existing user
+  - Body: `{ "email": "user@example.com", "password": "secret123" }`
+  - Returns: auth token and user info
+
 - `POST /forgot-password`
+  - Request password reset email
+  - Body: `{ "email": "user@example.com" }`
+
 - `POST /reset-password`
-  - Authentication and password recovery flow.
+  - Complete password reset flow
+  - Body: `{ "token": "reset_token", "new_password": "newpass123" }`
 
-- `POST /predict`
-  - Single claim prediction (unprotected).
+### Claim Analysis Endpoints
 
-- `POST /summarize`
-  - LLM summary for free text.
+- `GET /`
+  - Health/status check
+  - Returns: `{ "message": "Healthcare AI API Running" }`
 
-- `POST /analyze`
-  - Protected single-claim analysis with ML + explanation + summary + persistence.
+- `POST /predict` (unprotected)
+  - Single claim ML prediction only (no persistence)
+  - Body: Claim object with fields: `provider`, `age`, `claim_amount`, `num_procedures`, `gender`
+  - Returns: `{ "fraud_prediction": { "prediction": 0/1, "confidence": 0.95 }, "claim_id": "...", "prediction_id": "..." }`
+
+- `POST /summarize` (unprotected)
+  - Generate LLM summary for claim text
+  - Body: `{ "text": "claim description..." }`
+  - Returns: `{ "summary": "..." }`
+
+- `POST /analyze` (protected)
+  - Complete claim analysis with ML prediction, anomaly detection, and LLM explanation
+  - Body: Claim object
+  - Returns: Prediction with confidence, anomaly score, explanation, summary, and persistence IDs
+  - Header: `Authorization: Bearer {access_token}`
 
 - `POST /batch-analyze`
-  - Batch analysis from JSON claim array.
+  - Analyze multiple claims in one request
+  - Body: Array of claim objects
+  - Returns: Array of prediction results with persistence
 
-- `POST /upload-csv`
-  - Protected CSV upload and batch persistence.
+- `POST /upload-csv` (protected)
+  - Upload CSV file for batch processing
+  - Multipart form with file upload
+  - Returns: Summary of processed rows and any errors
 
-- `GET /history`
-- `GET /history/{id}`
-  - Protected, user-scoped claim/prediction history.
+### History & Analytics
+
+- `GET /history` (protected)
+  - Get authenticated user's claim/prediction history
+  - Returns: Paginated list of claims with latest predictions
+  - Header: `Authorization: Bearer {access_token}`
+
+- `GET /history/{id}` (protected)
+  - Get detailed history for specific claim prediction
+  - Returns: Full claim data with all prediction details
 
 - `GET /model-metrics`
-  - Model performance metrics and feature importance.
+  - ML model performance metrics
+  - Returns: Accuracy, precision, recall, F1, confusion matrix, feature importance rankings
 
 - `GET /analytics`
-  - Dashboard analytics aggregates.
+  - Dashboard analytics aggregates
+  - Returns: Total claims, fraud rate, average claim amount by provider, gender distribution, high-risk count
 
-## Frontend Routes
+## Frontend Pages
 
-- Public:
-  - `/` (landing page)
-  - `/login`
-  - `/register`
-- Protected:
-  - `/dashboard`
-  - `/analyze`
-  - `/batch-upload`
-  - `/analytics`
-  - `/history`
+All protected pages require login. Features include:
+
+### `/dashboard`
+- Real-time fraud monitoring command center
+- Metric cards: Total claims, fraud cases, fraud rate, high-risk alerts
+- Charts: Fraud distribution pie chart, claim trends over time
+- Recent claims table with latest predictions
+- Analytics aggregates updated on load
+
+### `/analyze`
+- Single-claim analysis form
+- Input fields for all required claim data
+- Real-time prediction results with confidence score
+- LLM-generated explanation of fraud risk
+- Claim summary and persistence confirmation
+
+### `/batch-upload`
+- CSV file upload interface
+- Row-by-row prediction ingestion
+- Progress tracking for batch processing
+- Results table with all predictions
+- Error handling and validation feedback
+
+### `/history`
+- User's complete claim history
+- Detailed view of each claim with all predictions
+- Result cards showing prediction details and explanations
+- Filterable and sortable history table
+
+### `/analytics`
+- Provider-level fraud statistics
+- Gender distribution breakdown
+- High-risk claim concentration
+- Average claim amounts by provider
+- Interactive charts with drill-down capability
 
 ## Troubleshooting
 
+### Backend Issues
+
 - Backend not reachable:
-  - Verify backend is running at port `8000`.
-  - Check frontend API base URL in `frontend/src/services/api.js`.
+  - Verify FastAPI is running: `GET http://127.0.0.1:8000`
+  - Check port 8000 is not in use: `netstat -ano | findstr :8000` (Windows)
+  - Confirm `MONGO_URI` points to running MongoDB instance
 
-- Auth issues (`401/403`):
-  - Ensure token is present and not expired.
-  - Re-login to refresh persisted auth state.
+- MongoDB connection error:
+  - Ensure MongoDB service is running: `mongod` (local) or check Atlas cluster status
+  - Verify `MONGO_URI` format: `mongodb://127.0.0.1:27017` (local) or Atlas connection string
+  - Test connection: `mongo mongodb://localhost:27017` from PowerShell
 
-- Theme mismatch:
-  - Theme mode is managed in `frontend/src/store/useStore.js` and applied in `frontend/src/App.jsx`.
+- Auth token expired (`401` error):
+  - Re-login to get a fresh token
+  - Token lifetime configured via `ACCESS_TOKEN_EXPIRE_MINUTES` env variable (default: 60 mins)
+
+- LLM requests fail (no summary/explanation):
+  - Verify `GROQ_API_KEY` in `.env` file
+  - Check API key is valid at https://console.groq.com
+  - Restart backend after updating env variables: `uvicorn app.main:app --reload`
+
+### Frontend Issues
+
+- Login redirect loop:
+  - Clear browser localStorage: DevTools > Application > Local Storage > Clear All
+  - Check `access_token` is being saved after login
+
+- API requests fail with 403:
+  - Ensure `Authorization: Bearer {token}` header is being sent
+  - Check token in `useStore.js` is being set correctly on login
+
+- Charts/tables show no data:
+  - Verify claims exist in MongoDB: `db.claims.countDocuments({})`
+  - Check user owns the claims (created by their user_id)
+  - Try fetching analytics with network tab open to see actual response
+
+- Theme not persisting:
+  - Theme mode is stored in Zustand store: `frontend/src/store/useStore.js`
+  - Clear localStorage and reload to reset theme to system default
+
+### System Issues
 
 - PowerShell execution policy blocks venv activation:
-  - `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
+  - Run: `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
+  - Or use Command Prompt (cmd.exe) instead: `venv\Scripts\activate.bat`
+
+- Port already in use:
+  - Backend: Change port with `uvicorn app.main:app --port 8001 --reload`
+  - Frontend: Change port with `npm run dev -- --port 5174`
 
 ## Current Status
 
 This project already includes:
-- database persistence,
-- authentication and protected multi-user flows,
-- batch upload + analytics,
-- production-style frontend shell,
-- responsive design and theming,
-- and model metrics support.
+- database persistence with MongoDB,
+- full authentication and protected multi-user flows,
+- batch CSV upload + analytics aggregations,
+- production-style SaaS frontend with theming,
+- responsive design and dark/light modes,
+- model metrics and performance tracking,
+- anomaly detection for pattern flagging,
+- and user-scoped data isolation.
+
+## Database Models
+
+### users
+Stores user account information:
+```json
+{
+  "_id": "ObjectId",
+  "email": "user@example.com",
+  "password": "hashed_password",
+  "rawpassword": "encrypted_plaintext",
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+### claims
+Stores submitted healthcare claims:
+```json
+{
+  "_id": "ObjectId",
+  "user_id": "ObjectId_ref_to_users",
+  "provider": "A",
+  "age": 45,
+  "claim_amount": 25000,
+  "num_procedures": 3,
+  "gender": "M",
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+### predictions
+Stores ML predictions and LLM explanations:
+```json
+{
+  "_id": "ObjectId",
+  "claim_id": "ObjectId_ref_to_claims",
+  "user_id": "ObjectId_ref_to_users",
+  "prediction": 1,
+  "confidence": 0.87,
+  "anomaly_score": -0.15,
+  "is_anomalous": false,
+  "explanation": "LLM generated explanation...",
+  "summary": "LLM generated summary...",
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+## Key Architecture Decisions
+
+1. **User-Scoped Data**: All analysis endpoints filter by `current_user["id"]` to ensure data isolation
+2. **Stateless Auth**: JWT tokens enable scalability without session storage
+3. **Separation of Concerns**: ML service, LLM service, and DB operations are decoupled
+4. **Batch Processing**: CSV upload allows bulk analysis in single request
+5. **Incremental Results**: Predictions are saved immediately for audit trail
+6. **Anomaly as Separate Signal**: Isolated from fraud model for flexibility in interpretati
