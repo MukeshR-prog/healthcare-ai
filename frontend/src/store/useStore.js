@@ -15,8 +15,14 @@ export const useStore = create(
         accessToken: null,
         user: null,
       },
+      sidebarCollapsed: false,
+      mobileSidebarOpen: false,
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
+      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
+      toggleMobileSidebar: () => set((state) => ({ mobileSidebarOpen: !state.mobileSidebarOpen })),
+      setMobileSidebarOpen: (mobileSidebarOpen) => set({ mobileSidebarOpen }),
       setLoadingKey: (key, isLoading) =>
         set((state) => {
           const loadingByKey = {
@@ -47,6 +53,7 @@ export const useStore = create(
       partialize: (state) => ({
         theme: state.theme,
         auth: state.auth,
+        sidebarCollapsed: state.sidebarCollapsed,
       }),
     },
   ),

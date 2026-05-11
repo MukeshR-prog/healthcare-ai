@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon } from 'lucide-react'
 import Dashboard from '@/pages/Dashboard'
 import Analyze from '@/pages/Analyze'
 import BatchUpload from '@/pages/BatchUpload'
@@ -24,6 +26,14 @@ const pageTitles = {
   '/history': 'Claim History',
 }
 
+const mobileLinks = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/analyze', label: 'Analyze', icon: Activity },
+  { to: '/batch-upload', label: 'Batch', icon: FileUp },
+  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { to: '/history', label: 'History', icon: HistoryIcon },
+]
+
 function ProtectedRoute({ children }) {
   const accessToken = useStore((state) => state.auth?.accessToken)
   if (!accessToken) {
@@ -41,27 +51,19 @@ function PublicRoute({ children }) {
 }
 
 function MobileNav() {
-  const links = [
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/analyze', label: 'Analyze' },
-    { to: '/batch-upload', label: 'Batch' },
-    { to: '/analytics', label: 'Analytics' },
-    { to: '/history', label: 'History' },
-  ]
-
   return (
-    <nav className='sticky top-16 z-20 border-b border-slate-200/70 bg-white/80 px-4 py-2 backdrop-blur lg:hidden dark:border-slate-800 dark:bg-slate-950/75'>
-      <div className='flex gap-2 overflow-x-auto'>
-        {links.map((link) => (
+    <nav className='sticky top-16 z-20 border-b border-slate-200/60 bg-white/70 px-4 py-2 backdrop-blur-md lg:hidden dark:border-slate-800/80 dark:bg-slate-950/75'>
+      <div className='flex gap-2 overflow-x-auto pb-1 scrollbar-none'>
+        {mobileLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
             className={({ isActive }) =>
               cn(
-                'rounded-xl px-3 py-1.5 text-sm whitespace-nowrap transition',
+                'rounded-xl px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all duration-200 border',
                 isActive
-                  ? 'bg-sky-600 text-white'
-                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200',
+                  ? 'bg-linear-to-r from-sky-600 to-sky-500 text-white shadow-sm border-transparent'
+                  : 'bg-white text-slate-600 border-slate-200/80 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800',
               )
             }
           >
@@ -75,13 +77,90 @@ function MobileNav() {
 
 function AppLayout() {
   const location = useLocation()
+  const sidebarCollapsed = useStore((state) => state.sidebarCollapsed)
+  const mobileSidebarOpen = useStore((state) => state.mobileSidebarOpen)
+  const setMobileSidebarOpen = useStore((state) => state.setMobileSidebarOpen)
 
   return (
     <div className='relative h-dvh overflow-hidden bg-app text-slate-900 transition-colors dark:text-slate-100'>
-      <div className='pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_10%_20%,rgba(14,165,233,0.18),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(2,132,199,0.14),transparent_30%)]' />
+      <div className='pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_10%_20%,rgba(14,165,233,0.15),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(99,102,241,0.12),transparent_30%)]' />
+      
       <div className='flex h-full min-h-0'>
+        {/* Desktop Collapsible Sidebar */}
         <Sidebar />
-        <div className='flex min-w-0 flex-1 flex-col overflow-hidden lg:pl-72'>
+
+        {/* Mobile Navigation Drawer */}
+        <AnimatePresence>
+          {mobileSidebarOpen && (
+            <div className='fixed inset-0 z-50 flex lg:hidden'>
+              {/* Backdrop overlay */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.4 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileSidebarOpen(false)}
+                className='fixed inset-0 bg-slate-950/80 backdrop-blur-xs'
+              />
+              
+              {/* Sliding sidebar container */}
+              <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'tween', duration: 0.28, ease: 'easeOut' }}
+                className='relative flex w-72 max-w-[85vw] flex-col bg-white p-5 shadow-2xl dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800'
+              >
+                <div className='mb-8 flex items-center justify-between'>
+                  <div className='flex items-center gap-3'>
+                    <div className='grid h-10 w-10 place-items-center rounded-2xl bg-linear-to-tr from-sky-600 to-indigo-600 text-white shadow-md'>
+                      <ShieldCheck className='h-5 w-5' />
+                    </div>
+                    <div>
+                      <p className='font-display text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100'>Healthcare AI</p>
+                      <p className='text-[10px] text-slate-400 font-medium'>Analytics Platform</p>
+                    </div>
+                  </div>
+                  
+                  <button
+                    type='button'
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className='grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'
+                    aria-label='Close menu'
+                  >
+                    <X className='h-4 w-4' />
+                  </button>
+                </div>
+
+                <nav className='flex-1 space-y-1.5'>
+                  {mobileLinks.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setMobileSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                          isActive
+                            ? 'bg-linear-to-r from-sky-600 to-sky-500 text-white shadow-md shadow-sky-500/10'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900/60 dark:hover:text-white',
+                        )
+                      }
+                    >
+                      <item.icon className='h-4 w-4 shrink-0' />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  ))}
+                </nav>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Page Content Area */}
+        <div className={cn(
+          'flex min-w-0 flex-1 flex-col overflow-hidden transition-all duration-300 ease-in-out',
+          sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'
+        )}>
           <Navbar title={pageTitles[location.pathname] || 'Healthcare AI'} />
           <MobileNav />
           <main key={location.pathname} className='flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6'>
