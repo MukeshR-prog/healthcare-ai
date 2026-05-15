@@ -17,12 +17,22 @@ export const useStore = create(
       },
       sidebarCollapsed: false,
       mobileSidebarOpen: false,
+      alerts: [],
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       toggleMobileSidebar: () => set((state) => ({ mobileSidebarOpen: !state.mobileSidebarOpen })),
       setMobileSidebarOpen: (mobileSidebarOpen) => set({ mobileSidebarOpen }),
+      setAlerts: (alerts) => set({ alerts }),
+      updateAlertStatus: (alertId, status) =>
+        set((state) => ({
+          alerts: state.alerts.map((a) => (a.id === alertId ? { ...a, status } : a)),
+        })),
+      updateAlertNotes: (alertId, notes) =>
+        set((state) => ({
+          alerts: state.alerts.map((a) => (a.id === alertId ? { ...a, notes } : a)),
+        })),
       setLoadingKey: (key, isLoading) =>
         set((state) => {
           const loadingByKey = {
@@ -46,6 +56,7 @@ export const useStore = create(
           history: [],
           prediction: null,
           batchResults: [],
+          alerts: [],
         }),
     }),
     {
@@ -54,6 +65,7 @@ export const useStore = create(
         theme: state.theme,
         auth: state.auth,
         sidebarCollapsed: state.sidebarCollapsed,
+        alerts: state.alerts,
       }),
     },
   ),
