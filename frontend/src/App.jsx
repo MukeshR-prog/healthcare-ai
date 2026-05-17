@@ -2,9 +2,10 @@ import { useEffect } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert } from 'lucide-react'
+import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert, Sparkles } from 'lucide-react'
 import Dashboard from '@/pages/Dashboard'
 import Alerts from '@/pages/Alerts'
+import AIInsights from '@/pages/AIInsights'
 import Analyze from '@/pages/Analyze'
 import BatchUpload from '@/pages/BatchUpload'
 import Analytics from '@/pages/Analytics'
@@ -22,6 +23,7 @@ import { cn } from '@/utils/cn'
 const pageTitles = {
   '/dashboard': 'Dashboard',
   '/alerts': 'Alert Management',
+  '/ai-insights': 'AI Risk Insights',
   '/analyze': 'Analyze Claim',
   '/batch-upload': 'Batch Upload',
   '/analytics': 'Analytics',
@@ -31,6 +33,7 @@ const pageTitles = {
 const mobileLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/alerts', label: 'Alerts', icon: ShieldAlert },
+  { to: '/ai-insights', label: 'Insights', icon: Sparkles },
   { to: '/analyze', label: 'Analyze', icon: Activity },
   { to: '/batch-upload', label: 'Batch', icon: FileUp },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
@@ -170,6 +173,7 @@ function AppLayout() {
             <Routes>
               <Route path='/dashboard' element={<Dashboard />} />
               <Route path='/alerts' element={<Alerts />} />
+              <Route path='/ai-insights' element={<AIInsights />} />
               <Route path='/analyze' element={<Analyze />} />
               <Route path='/batch-upload' element={<BatchUpload />} />
               <Route path='/analytics' element={<Analytics />} />
