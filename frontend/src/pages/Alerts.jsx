@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { Activity, ShieldAlert, CheckCircle, Percent, Search, SlidersHorizontal, ChevronRight, X, Save, Eye, FileText, User } from 'lucide-react'
+import { Activity, ShieldAlert, CheckCircle, Percent, Search, SlidersHorizontal, ChevronRight, X, Save, Eye, FileText, User, ClipboardCheck, FolderPlus } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useStore } from '@/store/useStore'
 import { useApi } from '@/hooks/useApi'
 import { MetricCard } from '@/components/cards/MetricCard'
@@ -162,6 +164,17 @@ function AlertDrawer({ alertItem, onClose, onUpdateStatus, onUpdateNotes }) {
   const [status, setStatus] = useState(alertItem?.status || 'New')
   const [notes, setNotes] = useState(alertItem?.notes || '')
   const [saving, setSaving] = useState(false)
+
+  const cases = useStore((state) => state.cases || [])
+  const createCase = useStore((state) => state.createCase)
+  const navigate = useNavigate()
+  const hasCase = cases.some((c) => c.alertId === alertItem.id)
+
+  const handleEscalateCase = () => {
+    createCase(alertItem)
+    toast.success('Investigation case created successfully!')
+    navigate('/investigations')
+  }
 
   useEffect(() => {
     if (alertItem) {
@@ -339,6 +352,26 @@ function AlertDrawer({ alertItem, onClose, onUpdateStatus, onUpdateNotes }) {
 
           {/* Drawer Footer Actions */}
           <div className='border-t border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800/80 dark:bg-slate-900/40 flex justify-end gap-2'>
+            {hasCase ? (
+              <button
+                type='button'
+                onClick={() => {
+                  onClose()
+                  navigate('/investigations')
+                }}
+                className='py-2 px-4 text-xs font-bold text-sky-600 bg-sky-50 rounded-xl hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-900/40 border border-sky-200/50 dark:border-sky-900/40 flex items-center gap-1.5 transition shadow-xs'
+              >
+                <ClipboardCheck className='h-3.5 w-3.5' /> View Case
+              </button>
+            ) : (
+              <button
+                type='button'
+                onClick={handleEscalateCase}
+                className='py-2 px-4 text-xs font-bold text-white bg-linear-to-r from-sky-600 to-indigo-600 rounded-xl hover:from-sky-700 hover:to-indigo-700 flex items-center gap-1.5 shadow-sm transition'
+              >
+                <FolderPlus className='h-3.5 w-3.5' /> Escalate Case
+              </button>
+            )}
             <button
               type='button'
               onClick={onClose}
