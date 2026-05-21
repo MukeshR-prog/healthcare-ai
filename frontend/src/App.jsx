@@ -2,10 +2,11 @@ import { useEffect } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert, Sparkles, ClipboardCheck } from 'lucide-react'
+import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert, Sparkles, ClipboardCheck, Hospital } from 'lucide-react'
 import Dashboard from '@/pages/Dashboard'
 import Alerts from '@/pages/Alerts'
 import Investigations from '@/pages/Investigations'
+import Providers from '@/pages/Providers'
 import AIInsights from '@/pages/AIInsights'
 import Analyze from '@/pages/Analyze'
 import BatchUpload from '@/pages/BatchUpload'
@@ -25,6 +26,7 @@ const pageTitles = {
   '/dashboard': 'Dashboard',
   '/alerts': 'Alert Management',
   '/investigations': 'Investigation Center',
+  '/providers': 'Provider Risk Intelligence',
   '/ai-insights': 'AI Risk Insights',
   '/analyze': 'Analyze Claim',
   '/batch-upload': 'Batch Upload',
@@ -36,6 +38,7 @@ const mobileLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/alerts', label: 'Alerts', icon: ShieldAlert },
   { to: '/investigations', label: 'Investigations', icon: ClipboardCheck },
+  { to: '/providers', label: 'Providers', icon: Hospital },
   { to: '/ai-insights', label: 'Insights', icon: Sparkles },
   { to: '/analyze', label: 'Analyze', icon: Activity },
   { to: '/batch-upload', label: 'Batch', icon: FileUp },
@@ -177,6 +180,7 @@ function AppLayout() {
               <Route path='/dashboard' element={<Dashboard />} />
               <Route path='/alerts' element={<Alerts />} />
               <Route path='/investigations' element={<Investigations />} />
+              <Route path='/providers' element={<Providers />} />
               <Route path='/ai-insights' element={<AIInsights />} />
               <Route path='/analyze' element={<Analyze />} />
               <Route path='/batch-upload' element={<BatchUpload />} />

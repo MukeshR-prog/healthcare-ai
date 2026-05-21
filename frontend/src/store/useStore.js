@@ -19,6 +19,8 @@ export const useStore = create(
       mobileSidebarOpen: false,
       alerts: [],
       cases: [],
+      providerWatchlist: [],
+      providerFlags: {},
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -128,6 +130,21 @@ export const useStore = create(
               : c
           )
         })),
+      toggleWatchlist: (providerName) =>
+        set((state) => {
+          const inList = state.providerWatchlist.includes(providerName)
+          const nextList = inList
+            ? state.providerWatchlist.filter((name) => name !== providerName)
+            : [...state.providerWatchlist, providerName]
+          return { providerWatchlist: nextList }
+        }),
+      setProviderFlag: (providerName, flagText) =>
+        set((state) => ({
+          providerFlags: {
+            ...state.providerFlags,
+            [providerName]: flagText,
+          },
+        })),
       setLoadingKey: (key, isLoading) =>
         set((state) => {
           const loadingByKey = {
@@ -153,6 +170,8 @@ export const useStore = create(
           batchResults: [],
           alerts: [],
           cases: [],
+          providerWatchlist: [],
+          providerFlags: {},
         }),
     }),
     {
@@ -163,6 +182,8 @@ export const useStore = create(
         sidebarCollapsed: state.sidebarCollapsed,
         alerts: state.alerts,
         cases: state.cases,
+        providerWatchlist: state.providerWatchlist,
+        providerFlags: state.providerFlags,
       }),
     },
   ),
