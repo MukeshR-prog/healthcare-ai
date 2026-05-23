@@ -21,6 +21,8 @@ export const useStore = create(
       cases: [],
       providerWatchlist: [],
       providerFlags: {},
+      documents: [],
+      verificationResults: [],
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -145,6 +147,51 @@ export const useStore = create(
             [providerName]: flagText,
           },
         })),
+      addDocument: (doc) =>
+        set((state) => ({
+          documents: [doc, ...state.documents],
+        })),
+      updateVerification: (docId, status, results) =>
+        set((state) => {
+          const nextDocs = state.documents.map((d) =>
+            d.id === docId ? { ...d, status, updated_at: new Date().toISOString() } : d
+          )
+          const exists = state.verificationResults.some((r) => r.docId === docId)
+          const nextResults = exists
+            ? state.verificationResults.map((r) =>
+                r.docId === docId
+                  ? { ...r, ...results, updated_at: new Date().toISOString() }
+                  : r
+              )
+            : [
+                ...state.verificationResults,
+                {
+                  docId,
+                  ...results,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                },
+              ]
+          return { documents: nextDocs, verificationResults: nextResults }
+        }),
+      addVerificationNote: (docId, text, analyst = 'Analyst') =>
+        set((state) => {
+          const nextDocs = state.documents.map((d) =>
+            d.id === docId
+              ? {
+                  ...d,
+                  notes: [...(d.notes || []), { text, date: new Date().toISOString(), analyst }],
+                  updated_at: new Date().toISOString(),
+                }
+              : d
+          )
+          return { documents: nextDocs }
+        }),
+      deleteDocument: (docId) =>
+        set((state) => ({
+          documents: state.documents.filter((d) => d.id !== docId),
+          verificationResults: state.verificationResults.filter((r) => r.docId !== docId),
+        })),
       setLoadingKey: (key, isLoading) =>
         set((state) => {
           const loadingByKey = {
@@ -172,6 +219,8 @@ export const useStore = create(
           cases: [],
           providerWatchlist: [],
           providerFlags: {},
+          documents: [],
+          verificationResults: [],
         }),
     }),
     {
@@ -184,6 +233,8 @@ export const useStore = create(
         cases: state.cases,
         providerWatchlist: state.providerWatchlist,
         providerFlags: state.providerFlags,
+        documents: state.documents,
+        verificationResults: state.verificationResults,
       }),
     },
   ),
