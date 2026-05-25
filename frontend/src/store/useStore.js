@@ -23,6 +23,8 @@ export const useStore = create(
       providerFlags: {},
       documents: [],
       verificationResults: [],
+      networkAnnotations: {},
+      savedNetworkViews: [],
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -192,6 +194,23 @@ export const useStore = create(
           documents: state.documents.filter((d) => d.id !== docId),
           verificationResults: state.verificationResults.filter((r) => r.docId !== docId),
         })),
+      saveNetworkView: (view) =>
+        set((state) => ({
+          savedNetworkViews: [view, ...state.savedNetworkViews],
+        })),
+      addNetworkAnnotation: (entityId, notesText) =>
+        set((state) => ({
+          networkAnnotations: {
+            ...state.networkAnnotations,
+            [entityId]: notesText,
+          },
+        })),
+      deleteNetworkAnnotation: (entityId) =>
+        set((state) => {
+          const next = { ...state.networkAnnotations }
+          delete next[entityId]
+          return { networkAnnotations: next }
+        }),
       setLoadingKey: (key, isLoading) =>
         set((state) => {
           const loadingByKey = {
@@ -221,6 +240,8 @@ export const useStore = create(
           providerFlags: {},
           documents: [],
           verificationResults: [],
+          networkAnnotations: {},
+          savedNetworkViews: [],
         }),
     }),
     {
@@ -235,6 +256,8 @@ export const useStore = create(
         providerFlags: state.providerFlags,
         documents: state.documents,
         verificationResults: state.verificationResults,
+        networkAnnotations: state.networkAnnotations,
+        savedNetworkViews: state.savedNetworkViews,
       }),
     },
   ),

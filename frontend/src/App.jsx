@@ -2,11 +2,12 @@ import { useEffect } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert, Sparkles, ClipboardCheck, Hospital, ScanLine } from 'lucide-react'
+import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert, Sparkles, ClipboardCheck, Hospital, ScanLine, Network } from 'lucide-react'
 import Dashboard from '@/pages/Dashboard'
 import Alerts from '@/pages/Alerts'
 import Investigations from '@/pages/Investigations'
 import Providers from '@/pages/Providers'
+import NetworkAnalysis from '@/pages/NetworkAnalysis'
 import Documents from '@/pages/Documents'
 import AIInsights from '@/pages/AIInsights'
 import Analyze from '@/pages/Analyze'
@@ -28,6 +29,7 @@ const pageTitles = {
   '/alerts': 'Alert Management',
   '/investigations': 'Investigation Center',
   '/providers': 'Provider Risk Intelligence',
+  '/network-analysis': 'Fraud Network Analysis',
   '/documents': 'Document Verification',
   '/ai-insights': 'AI Risk Insights',
   '/analyze': 'Analyze Claim',
@@ -41,6 +43,7 @@ const mobileLinks = [
   { to: '/alerts', label: 'Alerts', icon: ShieldAlert },
   { to: '/investigations', label: 'Investigations', icon: ClipboardCheck },
   { to: '/providers', label: 'Providers', icon: Hospital },
+  { to: '/network-analysis', label: 'Network', icon: Network },
   { to: '/documents', label: 'Documents', icon: ScanLine },
   { to: '/ai-insights', label: 'Insights', icon: Sparkles },
   { to: '/analyze', label: 'Analyze', icon: Activity },
@@ -184,6 +187,7 @@ function AppLayout() {
               <Route path='/alerts' element={<Alerts />} />
               <Route path='/investigations' element={<Investigations />} />
               <Route path='/providers' element={<Providers />} />
+              <Route path='/network-analysis' element={<NetworkAnalysis />} />
               <Route path='/documents' element={<Documents />} />
               <Route path='/ai-insights' element={<AIInsights />} />
               <Route path='/analyze' element={<Analyze />} />

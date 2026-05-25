@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Activity, BarChart3, FileUp, History, LayoutDashboard, ShieldCheck, ChevronLeft, ChevronRight, ShieldAlert, Sparkles, ClipboardCheck, Hospital, ScanLine } from 'lucide-react'
+import { Activity, BarChart3, FileUp, History, LayoutDashboard, ShieldCheck, ChevronLeft, ChevronRight, ShieldAlert, Sparkles, ClipboardCheck, Hospital, ScanLine, Network } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useStore } from '@/store/useStore'
 import { cn } from '@/utils/cn'
@@ -9,6 +9,7 @@ const items = [
   { to: '/alerts', label: 'Alerts', icon: ShieldAlert },
   { to: '/investigations', label: 'Investigations', icon: ClipboardCheck },
   { to: '/providers', label: 'Provider Intelligence', icon: Hospital },
+  { to: '/network-analysis', label: 'Network Analysis', icon: Network },
   { to: '/documents', label: 'Document Verification', icon: ScanLine },
   { to: '/ai-insights', label: 'AI Insights', icon: Sparkles },
   { to: '/analyze', label: 'Analyze', icon: Activity },
