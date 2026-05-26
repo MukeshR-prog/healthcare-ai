@@ -25,6 +25,15 @@ export const useStore = create(
       verificationResults: [],
       networkAnnotations: {},
       savedNetworkViews: [],
+      copilotChats: [],
+      copilotSuggestions: [
+        'Which provider has the highest fraud risk?',
+        'Show critical investigations.',
+        'Summarize recent alerts.',
+        'Explain Provider B risk score.',
+        'Show document verification mismatches.'
+      ],
+      savedQueries: [],
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -211,6 +220,23 @@ export const useStore = create(
           delete next[entityId]
           return { networkAnnotations: next }
         }),
+      sendCopilotMessage: (message) =>
+        set((state) => ({
+          copilotChats: [...state.copilotChats, message],
+        })),
+      saveCopilotQuery: (query) =>
+        set((state) => {
+          const exists = state.savedQueries.some((q) => q.text === query.text)
+          if (exists) return {}
+          return { savedQueries: [query, ...state.savedQueries] }
+        }),
+      clearCopilotHistory: () => set({ copilotChats: [] }),
+      pinCopilotResponse: (messageId) =>
+        set((state) => ({
+          copilotChats: state.copilotChats.map((c) =>
+            c.id === messageId ? { ...c, isPinned: !c.isPinned } : c
+          ),
+        })),
       setLoadingKey: (key, isLoading) =>
         set((state) => {
           const loadingByKey = {
@@ -242,6 +268,8 @@ export const useStore = create(
           verificationResults: [],
           networkAnnotations: {},
           savedNetworkViews: [],
+          copilotChats: [],
+          savedQueries: [],
         }),
     }),
     {
@@ -258,6 +286,8 @@ export const useStore = create(
         verificationResults: state.verificationResults,
         networkAnnotations: state.networkAnnotations,
         savedNetworkViews: state.savedNetworkViews,
+        copilotChats: state.copilotChats,
+        savedQueries: state.savedQueries,
       }),
     },
   ),

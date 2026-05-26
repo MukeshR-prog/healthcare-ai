@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert, Sparkles, ClipboardCheck, Hospital, ScanLine, Network } from 'lucide-react'
+import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert, Sparkles, ClipboardCheck, Hospital, ScanLine, Network, Bot } from 'lucide-react'
 import Dashboard from '@/pages/Dashboard'
 import Alerts from '@/pages/Alerts'
 import Investigations from '@/pages/Investigations'
@@ -10,6 +10,7 @@ import Providers from '@/pages/Providers'
 import NetworkAnalysis from '@/pages/NetworkAnalysis'
 import Documents from '@/pages/Documents'
 import AIInsights from '@/pages/AIInsights'
+import Copilot from '@/pages/Copilot'
 import Analyze from '@/pages/Analyze'
 import BatchUpload from '@/pages/BatchUpload'
 import Analytics from '@/pages/Analytics'
@@ -32,6 +33,7 @@ const pageTitles = {
   '/network-analysis': 'Fraud Network Analysis',
   '/documents': 'Document Verification',
   '/ai-insights': 'AI Risk Insights',
+  '/copilot': 'AI Fraud Copilot',
   '/analyze': 'Analyze Claim',
   '/batch-upload': 'Batch Upload',
   '/analytics': 'Analytics',
@@ -46,6 +48,7 @@ const mobileLinks = [
   { to: '/network-analysis', label: 'Network', icon: Network },
   { to: '/documents', label: 'Documents', icon: ScanLine },
   { to: '/ai-insights', label: 'Insights', icon: Sparkles },
+  { to: '/copilot', label: 'Copilot', icon: Bot },
   { to: '/analyze', label: 'Analyze', icon: Activity },
   { to: '/batch-upload', label: 'Batch', icon: FileUp },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
@@ -190,6 +193,7 @@ function AppLayout() {
               <Route path='/network-analysis' element={<NetworkAnalysis />} />
               <Route path='/documents' element={<Documents />} />
               <Route path='/ai-insights' element={<AIInsights />} />
+              <Route path='/copilot' element={<Copilot />} />
               <Route path='/analyze' element={<Analyze />} />
               <Route path='/batch-upload' element={<BatchUpload />} />
               <Route path='/analytics' element={<Analytics />} />

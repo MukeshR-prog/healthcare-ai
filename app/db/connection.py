@@ -1,6 +1,8 @@
 from typing import Generator
 
+# pyrefly: ignore [missing-import]
 from pymongo import MongoClient
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 
 from app.core.config import settings

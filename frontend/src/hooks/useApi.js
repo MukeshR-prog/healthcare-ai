@@ -79,22 +79,29 @@ export function useApi() {
 
   const fetchAnalytics = useCallback(async () => {
     const response = await withLoading('analytics', () => healthcareApi.getAnalytics())
-    setAnalytics(response.data)
-    return response.data
+    if (response) {
+      setAnalytics(response.data)
+      return response.data
+    }
   }, [setAnalytics, withLoading])
 
   const fetchHistory = useCallback(async () => {
     const response = await withLoading('history', () => healthcareApi.getHistory())
-    const items = response.data?.items || []
-    setHistory(items)
-    return items
+    if (response) {
+      const items = response.data?.items || []
+      setHistory(items)
+      return items
+    }
+    return []
   }, [setHistory, withLoading])
 
   const submitAnalyze = useCallback(
     async (payload) => {
       const response = await withLoading('analyze', () => healthcareApi.analyzeClaim(payload))
-      setPrediction(response.data)
-      return response.data
+      if (response) {
+        setPrediction(response.data)
+        return response.data
+      }
     },
     [setPrediction, withLoading],
   )
@@ -102,9 +109,12 @@ export function useApi() {
   const submitBatchAnalyze = useCallback(
     async (payload) => {
       const response = await withLoading('batch', () => healthcareApi.batchAnalyze(payload))
-      const data = response.data?.results || []
-      setBatchResults(data)
-      return data
+      if (response) {
+        const data = response.data?.results || []
+        setBatchResults(data)
+        return data
+      }
+      return []
     },
     [setBatchResults, withLoading],
   )
@@ -112,9 +122,12 @@ export function useApi() {
   const submitCsvUpload = useCallback(
     async (file) => {
       const response = await withLoading('upload', () => healthcareApi.uploadCsv(file))
-      const data = response.data?.results || []
-      setBatchResults(data)
-      return data
+      if (response) {
+        const data = response.data?.results || []
+        setBatchResults(data)
+        return data
+      }
+      return []
     },
     [setBatchResults, withLoading],
   )
