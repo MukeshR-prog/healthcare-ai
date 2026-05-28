@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert, Sparkles, ClipboardCheck, Hospital, ScanLine, Network, Bot } from 'lucide-react'
+import { ShieldCheck, X, LayoutDashboard, Activity, FileUp, BarChart3, History as HistoryIcon, ShieldAlert, Sparkles, ClipboardCheck, Hospital, ScanLine, Network, Bot, FileBarChart } from 'lucide-react'
 import Dashboard from '@/pages/Dashboard'
 import Alerts from '@/pages/Alerts'
 import Investigations from '@/pages/Investigations'
@@ -11,6 +11,7 @@ import NetworkAnalysis from '@/pages/NetworkAnalysis'
 import Documents from '@/pages/Documents'
 import AIInsights from '@/pages/AIInsights'
 import Copilot from '@/pages/Copilot'
+import Reports from '@/pages/Reports'
 import Analyze from '@/pages/Analyze'
 import BatchUpload from '@/pages/BatchUpload'
 import Analytics from '@/pages/Analytics'
@@ -34,6 +35,7 @@ const pageTitles = {
   '/documents': 'Document Verification',
   '/ai-insights': 'AI Risk Insights',
   '/copilot': 'AI Fraud Copilot',
+  '/reports': 'Reports & Audit Center',
   '/analyze': 'Analyze Claim',
   '/batch-upload': 'Batch Upload',
   '/analytics': 'Analytics',
@@ -49,6 +51,7 @@ const mobileLinks = [
   { to: '/documents', label: 'Documents', icon: ScanLine },
   { to: '/ai-insights', label: 'Insights', icon: Sparkles },
   { to: '/copilot', label: 'Copilot', icon: Bot },
+  { to: '/reports', label: 'Reports', icon: FileBarChart },
   { to: '/analyze', label: 'Analyze', icon: Activity },
   { to: '/batch-upload', label: 'Batch', icon: FileUp },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
@@ -194,6 +197,7 @@ function AppLayout() {
               <Route path='/documents' element={<Documents />} />
               <Route path='/ai-insights' element={<AIInsights />} />
               <Route path='/copilot' element={<Copilot />} />
+              <Route path='/reports' element={<Reports />} />
               <Route path='/analyze' element={<Analyze />} />
               <Route path='/batch-upload' element={<BatchUpload />} />
               <Route path='/analytics' element={<Analytics />} />

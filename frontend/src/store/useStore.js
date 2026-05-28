@@ -34,6 +34,9 @@ export const useStore = create(
         'Show document verification mismatches.'
       ],
       savedQueries: [],
+      reports: [],
+      reportTemplates: [],
+      auditLogs: [],
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -237,6 +240,34 @@ export const useStore = create(
             c.id === messageId ? { ...c, isPinned: !c.isPinned } : c
           ),
         })),
+      createReport: (report) =>
+        set((state) => ({
+          reports: [report, ...state.reports],
+        })),
+      deleteReport: (id) =>
+        set((state) => ({
+          reports: state.reports.filter((r) => r.id !== id),
+        })),
+      duplicateReport: (id) =>
+        set((state) => {
+          const target = state.reports.find((r) => r.id === id)
+          if (!target) return {}
+          const duplicate = {
+            ...target,
+            id: `REP-${Date.now()}`,
+            title: `${target.title} (Copy)`,
+            date: new Date().toISOString(),
+          }
+          return { reports: [duplicate, ...state.reports] }
+        }),
+      saveTemplate: (template) =>
+        set((state) => ({
+          reportTemplates: [template, ...state.reportTemplates],
+        })),
+      createAuditLog: (log) =>
+        set((state) => ({
+          auditLogs: [log, ...state.auditLogs],
+        })),
       setLoadingKey: (key, isLoading) =>
         set((state) => {
           const loadingByKey = {
@@ -270,6 +301,9 @@ export const useStore = create(
           savedNetworkViews: [],
           copilotChats: [],
           savedQueries: [],
+          reports: [],
+          reportTemplates: [],
+          auditLogs: [],
         }),
     }),
     {
@@ -288,6 +322,9 @@ export const useStore = create(
         savedNetworkViews: state.savedNetworkViews,
         copilotChats: state.copilotChats,
         savedQueries: state.savedQueries,
+        reports: state.reports,
+        reportTemplates: state.reportTemplates,
+        auditLogs: state.auditLogs,
       }),
     },
   ),
