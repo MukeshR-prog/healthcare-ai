@@ -47,6 +47,12 @@ export const healthcareApi = {
   getAnalytics: () => api.get('/analytics'),
   getHistory: () => api.get('/history'),
   getModelMetrics: () => api.get('/model-metrics'),
+  getAlerts: (params) => api.get('/api/alerts', { params }),
+  getAlert: (id) => api.get(`/api/alerts/${id}`),
+  updateAlertStatus: (id, status) => api.patch(`/api/alerts/${id}/status`, { status }),
+  addAlertNote: (id, text) => api.post(`/api/alerts/${id}/notes`, { text }),
+  createAlert: (payload) => api.post('/api/alerts', payload),
+  deleteAlert: (id) => api.delete(`/api/alerts/${id}`),
 }
 
 export default api

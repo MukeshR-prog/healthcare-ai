@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { healthcareApi } from '@/services/api'
 
 export const useStore = create(
   persist(
@@ -44,14 +45,37 @@ export const useStore = create(
       toggleMobileSidebar: () => set((state) => ({ mobileSidebarOpen: !state.mobileSidebarOpen })),
       setMobileSidebarOpen: (mobileSidebarOpen) => set({ mobileSidebarOpen }),
       setAlerts: (alerts) => set({ alerts }),
-      updateAlertStatus: (alertId, status) =>
-        set((state) => ({
-          alerts: state.alerts.map((a) => (a.id === alertId ? { ...a, status } : a)),
-        })),
-      updateAlertNotes: (alertId, notes) =>
-        set((state) => ({
-          alerts: state.alerts.map((a) => (a.id === alertId ? { ...a, notes } : a)),
-        })),
+      updateAlertStatus: async (alertId, status) => {
+        try {
+          await healthcareApi.updateAlertStatus(alertId, status)
+          set((state) => ({
+            alerts: state.alerts.map((a) => (a.id === alertId ? { ...a, status } : a)),
+          }))
+        } catch (error) {
+          console.error("Failed to update status on backend:", error)
+        }
+      },
+      updateAlertNotes: async (alertId, text) => {
+        try {
+          const alert = useStore.getState().alerts.find(a => a.id === alertId)
+          const oldText = alert ? alert.notes : ''
+          
+          let noteToAppend = text
+          if (oldText && text.startsWith(oldText)) {
+            noteToAppend = text.slice(oldText.length).trim()
+          }
+          
+          if (noteToAppend) {
+            await healthcareApi.addAlertNote(alertId, noteToAppend)
+          }
+          
+          set((state) => ({
+            alerts: state.alerts.map((a) => (a.id === alertId ? { ...a, notes: text } : a)),
+          }))
+        } catch (error) {
+          console.error("Failed to add note on backend:", error)
+        }
+      },
       setCases: (cases) => set({ cases }),
       createCase: (alertItem, analystName = 'Unassigned', priority = 'Medium') =>
         set((state) => {
@@ -312,7 +336,6 @@ export const useStore = create(
         theme: state.theme,
         auth: state.auth,
         sidebarCollapsed: state.sidebarCollapsed,
-        alerts: state.alerts,
         cases: state.cases,
         providerWatchlist: state.providerWatchlist,
         providerFlags: state.providerFlags,

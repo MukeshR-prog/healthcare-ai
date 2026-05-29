@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
+from bson import ObjectId
 
 from app.models.claim import Claim
 from app.models.prediction import Prediction
 from app.schemas.claim import ClaimCreate
 from app.schemas.history import HistoryClaim, HistoryItem, HistoryPrediction
+from app.services.alert_service import AlertService
 
 
 def save_claim(db, claim_input: ClaimCreate, user_id: str | None = None) -> str:
@@ -33,7 +35,31 @@ def save_prediction(
     )
     payload = prediction_doc.model_dump(by_alias=True, exclude={"id"})
     result = db["predictions"].insert_one(payload)
-    return str(result.inserted_id)
+    prediction_id = str(result.inserted_id)
+
+    # Auto-generation trigger check
+    if prediction_value == 1 or confidence >= 0.70:
+        operator_email = "system"
+        if user_id:
+            user_doc = db["users"].find_one({"_id": ObjectId(user_id)})
+            if user_doc:
+                operator_email = user_doc.get("email", "system")
+        
+        claim_doc = db["claims"].find_one({"_id": ObjectId(claim_id)})
+        provider = claim_doc.get("provider", "Unknown Provider") if claim_doc else "Unknown Provider"
+        claim_amount = claim_doc.get("claim_amount", 0.0) if claim_doc else 0.0
+
+        AlertService.process_prediction_alert(
+            db=db,
+            claim_id=claim_id,
+            prediction_id=prediction_id,
+            provider=provider,
+            claim_amount=claim_amount,
+            risk_score=confidence,
+            operator_email=operator_email
+        )
+
+    return prediction_id
 
 
 def serialize_claim(claim_doc: dict) -> HistoryClaim:

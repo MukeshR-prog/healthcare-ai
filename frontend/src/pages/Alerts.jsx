@@ -401,7 +401,8 @@ export default function Alerts() {
   const updateAlertNotes = useStore((state) => state.updateAlertNotes)
   const history = useStore((state) => state.history)
   const loadingHistory = useStore((state) => state.loadingByKey?.history)
-  const { fetchHistory } = useApi()
+  const loadingAlerts = useStore((state) => state.loadingByKey?.alerts)
+  const { fetchHistory, fetchAlerts } = useApi()
 
   // State
   const [selectedAlert, setSelectedAlert] = useState(null)
@@ -412,80 +413,11 @@ export default function Alerts() {
   const [sortConfig, setSortConfig] = useState({ key: 'riskScore', direction: 'desc' })
   const pageSize = 8
 
-  // Sync / fetch history
+  // Sync / fetch database values on mount
   useEffect(() => {
     fetchHistory()
-  }, [fetchHistory])
-
-  // Initialize store alerts from prediction history if empty
-  useEffect(() => {
-    if (history && history.length > 0 && (!alerts || alerts.length === 0)) {
-      const generatedAlerts = history
-        .map((item, idx) => {
-          const claim = item.claim || {}
-          const pred = item.latest_prediction || {}
-          const isFraud = pred.prediction === 1
-          
-          if (!isFraud) return null
-          
-          const riskScore = pred.confidence || 0
-          let severity = 'Low'
-          if (riskScore >= 0.90) severity = 'Critical'
-          else if (riskScore >= 0.75) severity = 'High'
-          else if (riskScore >= 0.50) severity = 'Medium'
-          
-          return {
-            id: `AL-88${String(idx + 1).padStart(3, '0')}`,
-            claimId: claim.id,
-            provider: claim.provider || 'Unknown Provider',
-            amount: claim.claim_amount || 0,
-            procedures: claim.num_procedures || 1,
-            gender: claim.gender || 'O',
-            riskScore: riskScore,
-            severity: severity,
-            status: 'New',
-            notes: '',
-            created_at: claim.created_at || new Date().toISOString()
-          }
-        })
-        .filter(Boolean)
-      
-      setAlerts(generatedAlerts)
-    } else if ((!history || history.length === 0) && (!alerts || alerts.length === 0)) {
-      // Fallback mocks
-      const providers = ['Provider A', 'Provider B', 'Provider C', 'Provider D']
-      const genders = ['M', 'F', 'O']
-      const severities = ['Critical', 'High', 'Medium', 'Low']
-      const statuses = ['New', 'Under Review', 'Investigating', 'Resolved']
-      
-      const mockAlerts = Array.from({ length: 18 }).map((_, idx) => {
-        const amount = Math.round(1800 * (0.6 + (idx % 6) * 0.25) + (idx % 3) * 350)
-        const confidence = 0.45 + (idx % 10) * 0.055
-        
-        let severity = 'Low'
-        if (confidence >= 0.90) severity = 'Critical'
-        else if (confidence >= 0.75) severity = 'High'
-        else if (confidence >= 0.50) severity = 'Medium'
-        
-        const dateStr = new Date(2026, 4, 1 + (idx % 28), 9 + (idx % 6), 10 + (idx % 45)).toISOString()
-        
-        return {
-          id: `AL-99${String(idx + 1).padStart(3, '0')}`,
-          claimId: `CL-77${String(idx + 1).padStart(3, '0')}`,
-          provider: providers[idx % providers.length],
-          amount: amount,
-          procedures: (idx % 3) + 1,
-          gender: genders[idx % genders.length],
-          riskScore: confidence,
-          severity: severity,
-          status: statuses[idx % statuses.length],
-          notes: idx % 3 === 0 ? 'Billing volume spiked in 10-minute window.' : '',
-          created_at: dateStr
-        }
-      })
-      setAlerts(mockAlerts)
-    }
-  }, [history, alerts, setAlerts])
+    fetchAlerts()
+  }, [fetchHistory, fetchAlerts])
 
   // Overview metrics
   const stats = useMemo(() => {
@@ -573,7 +505,7 @@ export default function Alerts() {
   }
 
   // Loader Skeletons
-  if (loadingHistory && (!alerts || alerts.length === 0)) {
+  if ((loadingHistory || loadingAlerts) && (!alerts || alerts.length === 0)) {
     return (
       <section className='space-y-6'>
         {/* KPI Cards Skeletons */}

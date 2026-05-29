@@ -10,6 +10,7 @@ export function useApi() {
   const setHistory = useStore((state) => state.setHistory)
   const setAuth = useStore((state) => state.setAuth)
   const clearAuth = useStore((state) => state.clearAuth)
+  const setAlerts = useStore((state) => state.setAlerts)
 
   const withLoading = useCallback(
     async (key, fn) => {
@@ -132,6 +133,34 @@ export function useApi() {
     [setBatchResults, withLoading],
   )
 
+  const fetchAlerts = useCallback(
+    async (params) => {
+      const response = await withLoading('alerts', () => healthcareApi.getAlerts(params))
+      if (response) {
+        const rawItems = response.data?.items || []
+        const mappedItems = rawItems.map(item => ({
+          id: item._id || item.id,
+          claimId: item.claim_id,
+          provider: item.provider,
+          amount: item.claim_amount,
+          procedures: item.procedures || 1,
+          gender: item.gender || 'O',
+          riskScore: item.risk_score,
+          severity: item.severity,
+          status: item.status,
+          notes: Array.isArray(item.notes) 
+            ? item.notes.map(n => n.text).join('\n') 
+            : (item.notes || ''),
+          created_at: item.created_at
+        }))
+        setAlerts(mappedItems)
+        return mappedItems
+      }
+      return []
+    },
+    [setAlerts, withLoading],
+  )
+
   return {
     login,
     register,
@@ -143,5 +172,6 @@ export function useApi() {
     submitAnalyze,
     submitBatchAnalyze,
     submitCsvUpload,
+    fetchAlerts,
   }
 }
