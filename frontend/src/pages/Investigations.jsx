@@ -349,7 +349,8 @@ export default function Investigations() {
   const updateCaseAssignment = useStore((state) => state.updateCaseAssignment)
   const addCaseNote = useStore((state) => state.addCaseNote)
   const loadingHistory = useStore((state) => state.loadingByKey?.history)
-  const { fetchHistory } = useApi()
+  const loadingCases = useStore((state) => state.loadingByKey?.cases)
+  const { fetchHistory, fetchCases } = useApi()
 
   // Selection & Filters
   const [selectedCase, setSelectedCase] = useState(null)
@@ -362,98 +363,11 @@ export default function Investigations() {
   const [sortDirection, setSortDirection] = useState('desc')
   const pageSize = 7
 
-  // Sync / fetch history
+  // Sync / fetch database values on mount
   useEffect(() => {
     fetchHistory()
-  }, [fetchHistory])
-
-  // Initialize mock cases from alerts if store is empty
-  useEffect(() => {
-    if (alerts && alerts.length > 0 && cases.length === 0) {
-      const initialCases = alerts.slice(0, 7).map((a, i) => {
-        const analysts = ['John Doe', 'Sarah Connor', 'Alex Mercer', 'Jane Smith']
-        const priorities = ['Critical', 'High', 'Medium', 'Low']
-        const statuses = ['New', 'Under Review', 'Investigating', 'Escalated', 'Confirmed Fraud', 'Closed']
-        
-        const analyst = analysts[i % analysts.length]
-        const priority = priorities[i % priorities.length]
-        const status = statuses[i % statuses.length]
-        
-        const statusHistoryMap = {
-          'New': 'Case Created',
-          'Under Review': 'Review Started',
-          'Investigating': 'Investigation Started',
-          'Escalated': 'Case Escalated',
-          'Confirmed Fraud': 'Fraud Confirmed',
-          'Closed': 'Case Closed'
-        }
-
-        const timeline = [
-          { status: 'New', title: 'Case Created', date: new Date(new Date(a.created_at).getTime() - 24 * 3600 * 1000).toISOString(), desc: 'Investigation case initialized from fraud alert.' }
-        ]
-        if (status !== 'New') {
-          timeline.push({
-            status: 'Under Review',
-            title: 'Review Started',
-            date: new Date(new Date(a.created_at).getTime() - 12 * 3600 * 1000).toISOString(),
-            desc: `Review initiated by analyst ${analyst}`
-          })
-        }
-        if (status === 'Investigating' || status === 'Escalated' || status === 'Confirmed Fraud' || status === 'Closed') {
-          timeline.push({
-            status: 'Investigating',
-            title: 'Investigation Started',
-            date: new Date(new Date(a.created_at).getTime() - 4 * 3600 * 1000).toISOString(),
-            desc: `Detailed audit started for Provider ${a.provider}.`
-          })
-        }
-        if (status === 'Escalated') {
-          timeline.push({
-            status: 'Escalated',
-            title: 'Case Escalated',
-            date: new Date(a.created_at).toISOString(),
-            desc: 'Case escalated to senior compliance board.'
-          })
-        }
-        if (status === 'Confirmed Fraud') {
-          timeline.push({
-            status: 'Confirmed Fraud',
-            title: 'Fraud Confirmed',
-            date: new Date(a.created_at).toISOString(),
-            desc: 'Model prediction verified. Provider flag raised.'
-          })
-        }
-        if (status === 'Closed') {
-          timeline.push({
-            status: 'Closed',
-            title: 'Case Closed',
-            date: new Date(a.created_at).toISOString(),
-            desc: 'Audit completed. No active fraud confirmed.'
-          })
-        }
-
-        return {
-          id: `CASE-99${String(i + 1).padStart(3, '0')}`,
-          alertId: a.id,
-          claimId: a.claimId || `CL-65${String(i + 1).padStart(3, '0')}`,
-          provider: a.provider,
-          amount: a.amount,
-          riskScore: a.riskScore,
-          severity: a.severity,
-          status: status,
-          assignedTo: analyst,
-          priority: priority,
-          created_at: new Date(new Date(a.created_at).getTime() - 24 * 3600 * 1000).toISOString(),
-          updated_at: new Date(a.created_at).toISOString(),
-          notes: [
-            { text: `Initial inspection of ${formatCurrency(a.amount)} claim launched.`, date: new Date(new Date(a.created_at).getTime() - 20 * 3600 * 1000).toISOString(), analyst: 'System' }
-          ],
-          timeline: timeline
-        }
-      })
-      setCases(initialCases)
-    }
-  }, [alerts, cases.length, setCases])
+    fetchCases()
+  }, [fetchHistory, fetchCases])
 
   // Overview metrics
   const stats = useMemo(() => {
@@ -642,7 +556,7 @@ export default function Investigations() {
   }
 
   // Skeletons
-  if (loadingHistory && cases.length === 0) {
+  if ((loadingHistory || loadingCases) && cases.length === 0) {
     return (
       <section className='space-y-6'>
         {/* Metric Cards Skeletons */}

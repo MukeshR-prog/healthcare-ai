@@ -53,6 +53,14 @@ export const healthcareApi = {
   addAlertNote: (id, text) => api.post(`/api/alerts/${id}/notes`, { text }),
   createAlert: (payload) => api.post('/api/alerts', payload),
   deleteAlert: (id) => api.delete(`/api/alerts/${id}`),
+  getCases: (params) => api.get('/api/cases', { params }),
+  getCase: (id) => api.get(`/api/cases/${id}`),
+  createCase: (payload) => api.post('/api/cases', payload),
+  updateCaseStatus: (id, status, description) => api.patch(`/api/cases/${id}/status`, { status, description }),
+  updateCaseAssignment: (id, assigned_to, priority) => api.patch(`/api/cases/${id}/assignment`, { assigned_to, priority }),
+  addCaseNote: (id, text) => api.post(`/api/cases/${id}/notes`, { text }),
+  getCaseTimeline: (id) => api.get(`/api/cases/${id}/timeline`),
+  deleteCase: (id) => api.delete(`/api/cases/${id}`),
 }
 
 export default api

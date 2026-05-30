@@ -11,6 +11,7 @@ export function useApi() {
   const setAuth = useStore((state) => state.setAuth)
   const clearAuth = useStore((state) => state.clearAuth)
   const setAlerts = useStore((state) => state.setAlerts)
+  const setCases = useStore((state) => state.setCases)
 
   const withLoading = useCallback(
     async (key, fn) => {
@@ -161,6 +162,46 @@ export function useApi() {
     [setAlerts, withLoading],
   )
 
+  const fetchCases = useCallback(
+    async (params) => {
+      const response = await withLoading('cases', () => healthcareApi.getCases(params))
+      if (response) {
+        const rawItems = response.data?.items || []
+        const mappedItems = rawItems.map(item => ({
+          id: item.id || item._id,
+          caseId: item.case_id,
+          alertId: item.alert_id,
+          claimId: item.claim_id,
+          provider: item.provider,
+          amount: item.amount || item.claim_amount || 0,
+          riskScore: item.riskScore || item.risk_score || 0,
+          severity: item.severity,
+          status: item.status,
+          priority: item.priority,
+          assignedTo: item.assignedTo || item.assigned_to,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          created_by: item.created_by,
+          notes: (item.notes || []).map(n => ({
+            analyst: n.analyst || n.author,
+            text: n.text || n.note,
+            date: n.date || n.created_at
+          })),
+          timeline: (item.timeline || []).map(t => ({
+            title: t.title || t.event_type,
+            desc: t.desc || t.description,
+            date: t.date || t.created_at,
+            status: t.status || t.event_type || 'New'
+          }))
+        }))
+        setCases(mappedItems)
+        return mappedItems
+      }
+      return []
+    },
+    [setCases, withLoading],
+  )
+
   return {
     login,
     register,
@@ -173,5 +214,6 @@ export function useApi() {
     submitBatchAnalyze,
     submitCsvUpload,
     fetchAlerts,
+    fetchCases,
   }
 }

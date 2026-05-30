@@ -77,99 +77,126 @@ export const useStore = create(
         }
       },
       setCases: (cases) => set({ cases }),
-      createCase: (alertItem, analystName = 'Unassigned', priority = 'Medium') =>
-        set((state) => {
-          const exists = state.cases.some((c) => c.alertId === alertItem.id || c.claimId === alertItem.claimId)
-          if (exists) return {}
-          
-          const newCase = {
-            id: `CASE-99${String(state.cases.length + 1).padStart(3, '0')}`,
-            alertId: alertItem.id,
-            claimId: alertItem.claimId,
-            provider: alertItem.provider || 'Unknown Provider',
-            amount: alertItem.amount || 0,
-            riskScore: alertItem.riskScore || 0,
-            severity: alertItem.severity || 'Medium',
-            status: 'New',
-            assignedTo: analystName,
-            priority: priority,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            notes: alertItem.notes ? [{ text: alertItem.notes, date: new Date().toISOString(), analyst: 'System' }] : [],
-            timeline: [
-              { status: 'New', title: 'Case Created', date: new Date().toISOString(), desc: 'Investigation case initialized from fraud alert.' }
-            ]
+      createCase: async (alertItem, analystName = 'Unassigned', priority = 'Medium') => {
+        try {
+          const exists = useStore.getState().cases.some((c) => c.alertId === alertItem.id || c.claimId === alertItem.claimId)
+          if (exists) return
+
+          const response = await healthcareApi.createCase({
+            alert_id: alertItem.id,
+            assigned_to: analystName,
+            priority: priority
+          })
+
+          if (response) {
+            const newItem = response.data
+            const mappedCase = {
+              id: newItem.id || newItem._id,
+              caseId: newItem.case_id,
+              alertId: newItem.alert_id,
+              claimId: newItem.claim_id,
+              provider: newItem.provider,
+              amount: newItem.amount || newItem.claim_amount || 0,
+              riskScore: newItem.riskScore || newItem.risk_score || 0,
+              severity: newItem.severity,
+              status: newItem.status,
+              priority: newItem.priority,
+              assignedTo: newItem.assignedTo || newItem.assigned_to,
+              created_at: newItem.created_at,
+              updated_at: newItem.updated_at,
+              created_by: newItem.created_by,
+              notes: (newItem.notes || []).map(n => ({
+                analyst: n.analyst || n.author,
+                text: n.text || n.note,
+                date: n.date || n.created_at
+              })),
+              timeline: (newItem.timeline || []).map(t => ({
+                title: t.title || t.event_type,
+                desc: t.desc || t.description,
+                date: t.date || t.created_at,
+                status: t.status || t.event_type || 'New'
+              }))
+            }
+            set((state) => ({ cases: [mappedCase, ...state.cases] }))
           }
-          return { cases: [newCase, ...state.cases] }
-        }),
-      updateCaseStatus: (caseId, status, desc = '') =>
-        set((state) => {
-          const statusHistoryMap = {
-            'New': 'Case Created',
-            'Under Review': 'Review Started',
-            'Investigating': 'Investigation Started',
-            'Escalated': 'Case Escalated',
-            'Confirmed Fraud': 'Fraud Confirmed',
-            'Closed': 'Case Closed'
-          }
-          return {
-            cases: state.cases.map((c) => {
-              if (c.id !== caseId) return c
-              const hasStatusInTimeline = c.timeline.some((t) => t.status === status)
-              const newTimeline = hasStatusInTimeline 
-                ? c.timeline 
-                : [...c.timeline, { 
-                    status, 
-                    title: statusHistoryMap[status] || status, 
-                    date: new Date().toISOString(), 
-                    desc: desc || `Status updated to ${status}` 
-                  }]
-              return {
+        } catch (error) {
+          console.error("Failed to create case on backend:", error)
+        }
+      },
+      updateCaseStatus: async (caseId, status, desc = '') => {
+        try {
+          const response = await healthcareApi.updateCaseStatus(caseId, status, desc)
+          if (response) {
+            const newItem = response.data
+            set((state) => ({
+              cases: state.cases.map((c) => (c.id === caseId ? {
                 ...c,
-                status,
-                updated_at: new Date().toISOString(),
-                timeline: newTimeline
-              }
-            })
+                status: newItem.status,
+                updated_at: newItem.updated_at,
+                timeline: (newItem.timeline || []).map(t => ({
+                  title: t.title || t.event_type,
+                  desc: t.desc || t.description,
+                  date: t.date || t.created_at,
+                  status: t.status || t.event_type || 'New'
+                }))
+              } : c))
+            }))
           }
-        }),
-      updateCaseAssignment: (caseId, assignedTo, priority) =>
-        set((state) => ({
-          cases: state.cases.map((c) =>
-            c.id === caseId
-              ? {
-                  ...c,
-                  assignedTo,
-                  priority,
-                  updated_at: new Date().toISOString(),
-                  timeline: [...c.timeline, {
-                    status: c.status,
-                    title: 'Metadata Updated',
-                    date: new Date().toISOString(),
-                    desc: `Assigned to ${assignedTo} with ${priority} priority.`
-                  }]
-                }
-              : c
-          )
-        })),
-      addCaseNote: (caseId, text, analyst = 'Analyst') =>
-        set((state) => ({
-          cases: state.cases.map((c) =>
-            c.id === caseId
-              ? {
-                  ...c,
-                  updated_at: new Date().toISOString(),
-                  notes: [...c.notes, { text, date: new Date().toISOString(), analyst }],
-                  timeline: [...c.timeline, {
-                    status: c.status,
-                    title: 'Note Added',
-                    date: new Date().toISOString(),
-                    desc: `Analyst ${analyst} recorded a new investigation note.`
-                  }]
-                }
-              : c
-          )
-        })),
+        } catch (error) {
+          console.error("Failed to update status on backend:", error)
+        }
+      },
+      updateCaseAssignment: async (caseId, assignedTo, priority) => {
+        try {
+          const response = await healthcareApi.updateCaseAssignment(caseId, assignedTo, priority)
+          if (response) {
+            const newItem = response.data
+            set((state) => ({
+              cases: state.cases.map((c) => (c.id === caseId ? {
+                ...c,
+                assignedTo: newItem.assigned_to || newItem.assignedTo,
+                priority: newItem.priority,
+                updated_at: newItem.updated_at,
+                timeline: (newItem.timeline || []).map(t => ({
+                  title: t.title || t.event_type,
+                  desc: t.desc || t.description,
+                  date: t.date || t.created_at,
+                  status: t.status || t.event_type || 'New'
+                }))
+              } : c))
+            }))
+          }
+        } catch (error) {
+          console.error("Failed to update assignment on backend:", error)
+        }
+      },
+      addCaseNote: async (caseId, text, analyst = 'Analyst') => {
+        try {
+          const response = await healthcareApi.addCaseNote(caseId, text)
+          if (response) {
+            const newItem = response.data
+            set((state) => ({
+              cases: state.cases.map((c) => (c.id === caseId ? {
+                ...c,
+                updated_at: newItem.updated_at,
+                notes: (newItem.notes || []).map(n => ({
+                  analyst: n.analyst || n.author,
+                  text: n.text || n.note,
+                  date: n.date || n.created_at
+                })),
+                timeline: (newItem.timeline || []).map(t => ({
+                  title: t.title || t.event_type,
+                  desc: t.desc || t.description,
+                  date: t.date || t.created_at,
+                  status: t.status || t.event_type || 'New'
+                }))
+              } : c))
+            }))
+          }
+        } catch (error) {
+          console.error("Failed to add note on backend:", error)
+        }
+      },
       toggleWatchlist: (providerName) =>
         set((state) => {
           const inList = state.providerWatchlist.includes(providerName)
@@ -336,7 +363,6 @@ export const useStore = create(
         theme: state.theme,
         auth: state.auth,
         sidebarCollapsed: state.sidebarCollapsed,
-        cases: state.cases,
         providerWatchlist: state.providerWatchlist,
         providerFlags: state.providerFlags,
         documents: state.documents,

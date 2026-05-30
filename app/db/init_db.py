@@ -15,6 +15,12 @@ def ensure_collections_and_indexes(db: Database) -> None:
         db.create_collection("alerts")
     if "audit_logs" not in existing:
         db.create_collection("audit_logs")
+    if "investigations" not in existing:
+        db.create_collection("investigations")
+    if "investigation_notes" not in existing:
+        db.create_collection("investigation_notes")
+    if "investigation_timeline" not in existing:
+        db.create_collection("investigation_timeline")
 
     db["claims"].create_index("created_at")
     db["claims"].create_index("user_id")
@@ -29,3 +35,12 @@ def ensure_collections_and_indexes(db: Database) -> None:
     db["alerts"].create_index("claim_id", unique=True)
     db["audit_logs"].create_index("timestamp")
     db["audit_logs"].create_index("action_type")
+
+    db["investigations"].create_index("case_id", unique=True)
+    db["investigations"].create_index("alert_id", unique=True)
+    db["investigations"].create_index("status")
+    db["investigations"].create_index("priority")
+    db["investigations"].create_index("assigned_to")
+    db["investigations"].create_index("created_at")
+    db["investigation_notes"].create_index("case_id")
+    db["investigation_timeline"].create_index("case_id")
