@@ -10,4 +10,5 @@ class User(BaseModel):
     email: str
     password: str
     rawpassword: str
+    role: str = Field(default="Analyst")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

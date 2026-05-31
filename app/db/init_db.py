@@ -33,8 +33,11 @@ def ensure_collections_and_indexes(db: Database) -> None:
     db["alerts"].create_index("severity")
     db["alerts"].create_index("created_at")
     db["alerts"].create_index("claim_id", unique=True)
-    db["audit_logs"].create_index("timestamp")
-    db["audit_logs"].create_index("action_type")
+    db["audit_logs"].create_index("event_type")
+    db["audit_logs"].create_index("entity_type")
+    db["audit_logs"].create_index("entity_id")
+    db["audit_logs"].create_index("performed_by")
+    db["audit_logs"].create_index("created_at")
 
     db["investigations"].create_index("case_id", unique=True)
     db["investigations"].create_index("alert_id", unique=True)

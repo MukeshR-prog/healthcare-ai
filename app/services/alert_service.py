@@ -113,10 +113,33 @@ class AlertService:
 
     @staticmethod
     def log_audit_event(db: Database, action_type: str, target_id: str, operator_email: str) -> None:
-        audit_doc = {
-            "timestamp": datetime.now(timezone.utc),
-            "action_type": action_type,
-            "target_id": target_id,
-            "operator_email": operator_email
-        }
-        db["audit_logs"].insert_one(audit_doc)
+        from app.services.audit_service import AuditService
+        
+        # Determine entity type, action, and description based on action_type
+        entity_type = "ALERT"
+        action = "UPDATE"
+        description = f"Alert action {action_type} performed."
+        
+        if action_type == "ALERT_CREATED":
+            action = "CREATE"
+            description = "Fraud alert initialized from prediction result."
+        elif action_type == "ALERT_STATUS_CHANGED":
+            action = "UPDATE"
+            description = "Alert workflow status updated."
+        elif action_type == "ALERT_NOTE_ADDED":
+            action = "UPDATE"
+            description = "Analyst comment added to alert."
+        elif action_type == "ALERT_DELETED":
+            action = "DELETE"
+            description = "Alert was deleted from the system."
+
+        AuditService.log_event(
+            db=db,
+            event_type=action_type,
+            entity_type=entity_type,
+            entity_id=target_id,
+            action=action,
+            description=description,
+            performed_by=operator_email,
+            metadata={"source": "alert_service"}
+        )

@@ -285,10 +285,42 @@ class InvestigationService:
 
     @staticmethod
     def log_audit_event(db: Database, action_type: str, target_id: str, operator_email: str) -> None:
-        audit_doc = {
-            "timestamp": datetime.now(timezone.utc),
-            "action_type": action_type,
-            "target_id": target_id,
-            "operator_email": operator_email
-        }
-        db["audit_logs"].insert_one(audit_doc)
+        from app.services.audit_service import AuditService
+        
+        # Determine action and description based on investigation action_type
+        entity_type = "INVESTIGATION"
+        action = "UPDATE"
+        description = f"Investigation action {action_type} performed."
+        
+        if action_type == "CASE_CREATED":
+            action = "CREATE"
+            description = "Investigation case initialized from fraud alert."
+        elif action_type == "CASE_ASSIGNED":
+            action = "UPDATE"
+            description = "Investigation case assignment updated."
+        elif action_type == "CASE_STATUS_CHANGED":
+            action = "UPDATE"
+            description = "Investigation workflow status transitioned."
+        elif action_type == "CASE_NOTE_ADDED":
+            action = "UPDATE"
+            description = "Analyst investigation note recorded."
+        elif action_type == "CASE_CLOSED":
+            action = "UPDATE"
+            description = "Investigation case resolved and closed."
+        elif action_type == "CASE_PRIORITY_UPDATED":
+            action = "UPDATE"
+            description = "Investigation case priority level changed."
+        elif action_type == "CASE_DELETED":
+            action = "DELETE"
+            description = "Investigation case removed from system."
+
+        AuditService.log_event(
+            db=db,
+            event_type=action_type,
+            entity_type=entity_type,
+            entity_id=target_id,
+            action=action,
+            description=description,
+            performed_by=operator_email,
+            metadata={"source": "investigation_service"}
+        )

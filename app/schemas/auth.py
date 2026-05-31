@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr, Field
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
+    role: str | None = "Analyst"
 
 
 class LoginRequest(BaseModel):
@@ -25,6 +26,7 @@ class AuthResponse(BaseModel):
     token_type: str = "bearer"
     user_id: str
     email: EmailStr
+    role: str = "Analyst"
 
 
 class MessageResponse(BaseModel):

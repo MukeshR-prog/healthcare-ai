@@ -31,10 +31,21 @@ def register_user(payload: RegisterRequest, db: Database = Depends(get_database)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    # Determine role, checking email first or utilizing explicit request
+    role = payload.role or "Analyst"
+    email_lower = payload.email.lower()
+    if "admin" in email_lower:
+        role = "Admin"
+    elif "auditor" in email_lower:
+        role = "Auditor"
+    elif "senior" in email_lower:
+        role = "Senior Analyst"
+
     user_doc = User(
         email=payload.email,
         password=hash_password(payload.password),
         rawpassword=encrypt_raw_password(payload.password),
+        role=role,
     )
     user_payload = user_doc.model_dump(by_alias=True, exclude={"id"})
     result = db["users"].insert_one(user_payload)
@@ -45,6 +56,7 @@ def register_user(payload: RegisterRequest, db: Database = Depends(get_database)
         access_token=token,
         user_id=user_id,
         email=payload.email,
+        role=role,
     )
 
 
@@ -60,10 +72,35 @@ def login_user(payload: LoginRequest, db: Database = Depends(get_database)):
     user_id = str(user_doc["_id"])
     token = create_access_token(user_id=user_id, email=user_doc["email"])
 
+    role = user_doc.get("role")
+    if not role:
+        email_lower = user_doc["email"].lower()
+        if "admin" in email_lower:
+            role = "Admin"
+        elif "auditor" in email_lower:
+            role = "Auditor"
+        elif "senior" in email_lower:
+            role = "Senior Analyst"
+        else:
+            role = "Analyst"
+
+    from app.services.audit_service import AuditService
+    AuditService.log_event(
+        db=db,
+        event_type="USER_LOGIN",
+        entity_type="USER",
+        entity_id=user_id,
+        action="LOGIN",
+        description=f"User {user_doc['email']} logged in successfully.",
+        performed_by=user_doc["email"],
+        metadata={"role": role}
+    )
+
     return AuthResponse(
         access_token=token,
         user_id=user_id,
         email=user_doc["email"],
+        role=role,
     )
 
 
