@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 import {
   PieChart,
   Pie,
@@ -96,9 +97,13 @@ function CaseDrawer({ caseItem, onClose, onUpdateStatus, onUpdateAssignment, onA
 
   const handlePostNote = (e) => {
     e.preventDefault()
-    if (!noteText.trim()) return
+    if (!noteText.trim()) {
+      toast.error('Please enter a note before submitting.')
+      return
+    }
     onAddNote(caseItem.id, noteText, currentAnalyst)
     setNoteText('')
+    toast.success('Note recorded successfully!')
   }
 
   const getPriorityColor = (pri) => {

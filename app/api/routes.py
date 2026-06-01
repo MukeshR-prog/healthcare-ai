@@ -7,6 +7,7 @@ from app.api.history_routes import router as history_router
 from app.api.alert_routes import router as alert_router
 from app.api.investigation_routes import router as investigation_router
 from app.api.audit_routes import router as audit_router
+from app.api.provider_routes import router as provider_router
 
 router = APIRouter()
 
@@ -17,3 +18,4 @@ router.include_router(history_router)
 router.include_router(alert_router)
 router.include_router(investigation_router)
 router.include_router(audit_router)
+router.include_router(provider_router)

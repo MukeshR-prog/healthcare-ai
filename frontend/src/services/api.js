@@ -61,6 +61,13 @@ export const healthcareApi = {
   addCaseNote: (id, text) => api.post(`/api/cases/${id}/notes`, { text }),
   getCaseTimeline: (id) => api.get(`/api/cases/${id}/timeline`),
   deleteCase: (id) => api.delete(`/api/cases/${id}`),
+  getProviders: (params) => api.get('/api/providers', { params }),
+  getProviderDetail: (id) => api.get(`/api/providers/${id}`),
+  getProviderMetrics: () => api.get('/api/providers/metrics'),
+  getProviderTrends: () => api.get('/api/providers/trends'),
+  updateProviderWatchlist: (id, watchlist) => api.patch(`/api/providers/${id}/watchlist`, { watchlist }),
+  updateProviderFlag: (id, flag) => api.patch(`/api/providers/${id}/flag`, { flag }),
+  compareProviders: (names) => api.post('/api/providers/compare', { names }),
 }
 
 export default api

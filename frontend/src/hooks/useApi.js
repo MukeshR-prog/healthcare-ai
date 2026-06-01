@@ -202,6 +202,42 @@ export function useApi() {
     [setCases, withLoading],
   )
 
+  const fetchProviders = useCallback(
+    async (params) => {
+      const response = await withLoading('providers', () => healthcareApi.getProviders(params))
+      if (response) {
+        useStore.setState({ providers: response.data })
+        return response.data
+      }
+      return []
+    },
+    [withLoading],
+  )
+
+  const fetchProviderMetrics = useCallback(
+    async () => {
+      const response = await withLoading('providerMetrics', () => healthcareApi.getProviderMetrics())
+      if (response) {
+        useStore.setState({ providerMetrics: response.data })
+        return response.data
+      }
+      return null
+    },
+    [withLoading],
+  )
+
+  const fetchProviderTrends = useCallback(
+    async () => {
+      const response = await withLoading('providerTrends', () => healthcareApi.getProviderTrends())
+      if (response) {
+        useStore.setState({ providerTrends: response.data })
+        return response.data
+      }
+      return []
+    },
+    [withLoading],
+  )
+
   return {
     login,
     register,
@@ -215,5 +251,8 @@ export function useApi() {
     submitCsvUpload,
     fetchAlerts,
     fetchCases,
+    fetchProviders,
+    fetchProviderMetrics,
+    fetchProviderTrends,
   }
 }

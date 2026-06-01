@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { healthcareApi } from '@/services/api'
+import toast from 'react-hot-toast'
 
 export const useStore = create(
   persist(
@@ -20,6 +21,9 @@ export const useStore = create(
       mobileSidebarOpen: false,
       alerts: [],
       cases: [],
+      providers: [],
+      providerMetrics: null,
+      providerTrends: [],
       providerWatchlist: [],
       providerFlags: {},
       documents: [],
@@ -56,6 +60,10 @@ export const useStore = create(
         }
       },
       updateAlertNotes: async (alertId, text) => {
+        if (!text || !text.trim()) {
+          toast.error('Please enter a note before saving.')
+          return
+        }
         try {
           const alert = useStore.getState().alerts.find(a => a.id === alertId)
           const oldText = alert ? alert.notes : ''
@@ -72,8 +80,10 @@ export const useStore = create(
           set((state) => ({
             alerts: state.alerts.map((a) => (a.id === alertId ? { ...a, notes: text } : a)),
           }))
+          toast.success('Note updated successfully!')
         } catch (error) {
           console.error("Failed to add note on backend:", error)
+          toast.error('Failed to save note: ' + (error.response?.data?.detail || error.message))
         }
       },
       setCases: (cases) => set({ cases }),
@@ -171,6 +181,10 @@ export const useStore = create(
         }
       },
       addCaseNote: async (caseId, text, analyst = 'Analyst') => {
+        if (!text || !text.trim()) {
+          toast.error('Please enter a note before submitting.')
+          return
+        }
         try {
           const response = await healthcareApi.addCaseNote(caseId, text)
           if (response) {
@@ -192,26 +206,69 @@ export const useStore = create(
                 }))
               } : c))
             }))
+            toast.success('Note added successfully!')
           }
         } catch (error) {
           console.error("Failed to add note on backend:", error)
+          toast.error('Failed to add note: ' + (error.response?.data?.detail || error.message))
         }
       },
-      toggleWatchlist: (providerName) =>
-        set((state) => {
-          const inList = state.providerWatchlist.includes(providerName)
-          const nextList = inList
-            ? state.providerWatchlist.filter((name) => name !== providerName)
-            : [...state.providerWatchlist, providerName]
-          return { providerWatchlist: nextList }
-        }),
-      setProviderFlag: (providerName, flagText) =>
-        set((state) => ({
-          providerFlags: {
-            ...state.providerFlags,
-            [providerName]: flagText,
-          },
-        })),
+      toggleWatchlist: async (providerName) => {
+        try {
+          const state = useStore.getState()
+          const provider = state.providers.find(p => p.name === providerName)
+          const currentWatchlisted = provider ? provider.watchlist : false
+          const nextWatchlisted = !currentWatchlisted
+          
+          await healthcareApi.updateProviderWatchlist(providerName, nextWatchlisted)
+          
+          set((state) => ({
+            providers: state.providers.map((p) => p.name === providerName ? { ...p, watchlist: nextWatchlisted } : p)
+          }))
+        } catch (error) {
+          console.error("Failed to toggle watchlist on backend:", error)
+        }
+      },
+      setProviderFlag: async (providerName, flagText) => {
+        try {
+          await healthcareApi.updateProviderFlag(providerName, flagText)
+          set((state) => ({
+            providers: state.providers.map((p) => p.name === providerName ? { ...p, flag: flagText } : p)
+          }))
+        } catch (error) {
+          console.error("Failed to save provider flag on backend:", error)
+        }
+      },
+      fetchProviders: async (params) => {
+        try {
+          const response = await healthcareApi.getProviders(params)
+          if (response) {
+            set({ providers: response.data })
+          }
+        } catch (error) {
+          console.error("Failed to fetch providers from backend:", error)
+        }
+      },
+      fetchProviderMetrics: async () => {
+        try {
+          const response = await healthcareApi.getProviderMetrics()
+          if (response) {
+            set({ providerMetrics: response.data })
+          }
+        } catch (error) {
+          console.error("Failed to fetch provider metrics from backend:", error)
+        }
+      },
+      fetchProviderTrends: async () => {
+        try {
+          const response = await healthcareApi.getProviderTrends()
+          if (response) {
+            set({ providerTrends: response.data })
+          }
+        } catch (error) {
+          console.error("Failed to fetch provider trends from backend:", error)
+        }
+      },
       addDocument: (doc) =>
         set((state) => ({
           documents: [doc, ...state.documents],
@@ -363,8 +420,6 @@ export const useStore = create(
         theme: state.theme,
         auth: state.auth,
         sidebarCollapsed: state.sidebarCollapsed,
-        providerWatchlist: state.providerWatchlist,
-        providerFlags: state.providerFlags,
         documents: state.documents,
         verificationResults: state.verificationResults,
         networkAnnotations: state.networkAnnotations,

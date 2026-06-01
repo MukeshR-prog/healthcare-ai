@@ -186,11 +186,16 @@ function AlertDrawer({ alertItem, onClose, onUpdateStatus, onUpdateNotes }) {
   if (!alertItem) return null
 
   const handleSave = () => {
+    if (!notes.trim()) {
+      toast.error('Please enter notes before saving.')
+      return
+    }
     setSaving(true)
     onUpdateStatus(alertItem.id, status)
     onUpdateNotes(alertItem.id, notes)
     setTimeout(() => {
       setSaving(false)
+      toast.success('Alert updated successfully!')
     }, 400)
   }
 

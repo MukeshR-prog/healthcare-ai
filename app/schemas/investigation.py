@@ -1,5 +1,15 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated
+from pydantic import BaseModel, ConfigDict, Field, AliasChoices, BeforeValidator, field_validator
+from bson import ObjectId
+
+# Helper to coerce MongoDB ObjectId to string
+def coerce_objectid(v):
+    if isinstance(v, ObjectId):
+        return str(v)
+    return v
+
+PyObjectId = Annotated[str, BeforeValidator(coerce_objectid)]
 
 
 class TimelineItemSchema(BaseModel):
@@ -25,7 +35,7 @@ class InvestigationResponse(BaseModel):
         json_encoders={datetime: lambda v: v.isoformat()}
     )
 
-    id: str = Field(alias="id")
+    id: PyObjectId = Field(alias="id", validation_alias=AliasChoices("id", "_id"))
     case_id: str
     alert_id: str
     claim_id: str
@@ -37,10 +47,11 @@ class InvestigationResponse(BaseModel):
     priority: str
     assignedTo: str = Field(alias="assigned_to")
     created_at: datetime
-    updated_at: datetime
-    created_by: str
+    updated_at: datetime | None = None
+    created_by: str | None = None
     notes: list[NoteItemSchema] = []
     timeline: list[TimelineItemSchema] = []
+
 
 
 class InvestigationCreate(BaseModel):
@@ -60,7 +71,14 @@ class InvestigationAssignmentUpdate(BaseModel):
 
 
 class InvestigationNoteCreate(BaseModel):
-    note: str = Field(alias="text")
+    note: str = Field(alias="text", min_length=1, max_length=2000)
+
+    @field_validator('note')
+    @classmethod
+    def validate_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Note cannot be empty or whitespace only')
+        return v.strip()
 
     model_config = ConfigDict(populate_by_name=True)
 

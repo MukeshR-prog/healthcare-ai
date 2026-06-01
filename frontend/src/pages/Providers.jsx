@@ -45,6 +45,7 @@ import {
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { useApi } from '@/hooks/useApi'
+import { healthcareApi } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -223,7 +224,7 @@ function ProviderDrawer({ providerItem, onClose, watchlistActive, onToggleWatchl
               <label htmlFor='provider-flag' className='text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500 block'>
                 Analyst Compliance Flag & Notes
               </label>
-              <form onSubmit={handleSaveMetadata} className='space-y-3.5'>
+              <form onSubmit={handleSaveFlag} className='space-y-3.5'>
                 <textarea
                   id='provider-flag'
                   rows={2}
@@ -292,17 +293,14 @@ function ProviderDrawer({ providerItem, onClose, watchlistActive, onToggleWatchl
 }
 
 export default function Providers() {
-  const history = useStore((state) => state.history || [])
-  const alerts = useStore((state) => state.alerts || [])
-  const cases = useStore((state) => state.cases || [])
-  
-  const providerWatchlist = useStore((state) => state.providerWatchlist || [])
-  const providerFlags = useStore((state) => state.providerFlags || {})
+  const providers = useStore((state) => state.providers || [])
+  const providerMetrics = useStore((state) => state.providerMetrics)
+
   const toggleWatchlist = useStore((state) => state.toggleWatchlist)
   const setProviderFlag = useStore((state) => state.setProviderFlag)
-  
-  const loading = useStore((state) => state.loadingByKey?.history)
-  const { fetchHistory } = useApi()
+
+  const loading = useStore((state) => state.loadingByKey?.providers)
+  const { fetchProviders, fetchProviderMetrics, fetchProviderTrends } = useApi()
 
   // Selection & Filters
   const [selectedProvider, setSelectedProvider] = useState(null)
@@ -316,210 +314,51 @@ export default function Providers() {
 
   // Comparisons selection state
   const [compareList, setCompareList] = useState([])
+  const [drawerProvider, setDrawerProvider] = useState(null)
 
-  // Load history data
+  // Load backend data on mount
   useEffect(() => {
-    fetchHistory()
-  }, [fetchHistory])
+    fetchProviders()
+    fetchProviderMetrics()
+    fetchProviderTrends()
+  }, [fetchProviders, fetchProviderMetrics, fetchProviderTrends])
 
-  // Grouping dynamic statistics
-  const providersData = useMemo(() => {
-    const grouped = {}
-    const allProviders = new Set()
-    
-    history.forEach(h => { if (h.claim?.provider) allProviders.add(h.claim.provider) })
-    alerts.forEach(a => { if (a.provider) allProviders.add(a.provider) })
-    cases.forEach(c => { if (c.provider) allProviders.add(c.provider) })
-
-    if (allProviders.size === 0) {
-      ['Provider A', 'Provider B', 'Provider C', 'Provider D'].forEach(p => allProviders.add(p))
+  // Load single provider details dynamically on drawer activation
+  useEffect(() => {
+    if (selectedProvider) {
+      healthcareApi.getProviderDetail(selectedProvider.name)
+        .then(res => setDrawerProvider(res.data))
+        .catch(err => console.error("Failed to load provider details:", err))
+    } else {
+      setDrawerProvider(null)
     }
+  }, [selectedProvider])
 
-    allProviders.forEach(pName => {
-      grouped[pName] = {
-        name: pName,
-        claimsCount: 0,
-        totalClaimAmount: 0,
-        fraudCount: 0,
-        alertCount: 0,
-        investigationCount: 0,
-        resolvedCount: 0,
-        avgClaimAmount: 0,
-        maxRisk: 0,
-        riskTimeline: [],
-        alertsList: [],
-        casesList: [],
-        claimsList: []
-      }
-    })
+  // Handle reset filters
+  const handleResetFilters = () => {
+    setSearch('')
+    setFilterRiskLevel('All')
+    setFilterWatchlist('All')
+    setCurrentPage(1)
+  }
 
-    history.forEach((h, idx) => {
-      const pName = h.claim?.provider || h.claim?.Provider
-      if (!pName || !grouped[pName]) return
-      const amount = Number(h.claim?.claim_amount || h.claim?.ClaimAmount || h.claim?.amount || 0)
-      const isFraud = h.latest_prediction?.prediction === 1
-      const conf = h.latest_prediction?.confidence || 0
-
-      grouped[pName].claimsCount++
-      grouped[pName].totalClaimAmount += amount
-      if (isFraud) {
-        grouped[pName].fraudCount++
-      }
-      if (conf > grouped[pName].maxRisk) {
-        grouped[pName].maxRisk = conf
-      }
-      grouped[pName].claimsList.push({
-        id: h.claim?.id || `CL-88${idx}`,
-        amount,
-        isFraud,
-        confidence: conf,
-        date: h.claim?.created_at || h.claim?.date || new Date().toISOString()
-      })
-    })
-
-    alerts.forEach(a => {
-      const pName = a.provider
-      if (!pName || !grouped[pName]) return
-      grouped[pName].alertCount++
-      grouped[pName].alertsList.push(a)
-    })
-
-    cases.forEach(c => {
-      const pName = c.provider
-      if (!pName || !grouped[pName]) return
-      grouped[pName].investigationCount++
-      if (c.status === 'Closed') {
-        grouped[pName].resolvedCount++
-      }
-      grouped[pName].casesList.push(c)
-    })
-
-    const list = Object.values(grouped).map(p => {
-      p.avgClaimAmount = p.claimsCount > 0 ? p.totalClaimAmount / p.claimsCount : 0
-      p.fraudRate = p.claimsCount > 0 ? (p.fraudCount / p.claimsCount) : 0
-
-      const alertScore = Math.min((p.alertCount / 5) * 100, 100)
-      const investigationScore = Math.min((p.investigationCount / 3) * 100, 100)
-      const costScore = Math.min((p.avgClaimAmount / 15000) * 100, 100)
-      
-      const rawScore = (p.fraudRate * 100 * 0.40) + (alertScore * 0.25) + (investigationScore * 0.20) + (costScore * 0.15)
-      p.riskScore = Math.round(Math.min(rawScore, 100))
-
-      if (p.riskScore >= 75) p.riskLevel = 'Critical'
-      else if (p.riskScore >= 50) p.riskLevel = 'High'
-      else if (p.riskScore >= 25) p.riskLevel = 'Medium'
-      else p.riskLevel = 'Low'
-
-      const rawTimeline = [
-        ...p.alertsList.map(a => ({ date: a.created_at, title: 'Alert Raised', desc: `Fraud alert flagged for claim ID ${a.claimId || '-'}.`, type: 'alert' })),
-        ...p.casesList.map(c => ({ date: c.created_at, title: 'Investigation Started', desc: `Case ${c.id} escalated for provider inspection.`, type: 'case' })),
-        ...p.casesList.filter(c => c.status === 'Closed').map(c => ({ date: c.updated_at, title: 'Investigation Concluded', desc: `Case ${c.id} closed and marked resolved.`, type: 'resolution' }))
-      ]
-      p.riskTimeline = rawTimeline.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
-      return p
-    })
-
-    return list
-  }, [history, alerts, cases])
-
-  // Mock fallbacks if lists are empty
-  const fallbackProviders = useMemo(() => {
-    return [
-      {
-        name: 'Provider B',
-        claimsCount: 24,
-        totalClaimAmount: 320000,
-        fraudCount: 8,
-        alertCount: 5,
-        investigationCount: 2,
-        resolvedCount: 0,
-        avgClaimAmount: 13333,
-        fraudRate: 0.33,
-        riskScore: 82,
-        riskLevel: 'Critical',
-        maxRisk: 0.94,
-        alertsList: [],
-        casesList: [],
-        claimsList: [],
-        riskTimeline: [{ date: new Date().toISOString(), title: 'Alert Raised', desc: 'Critical fraud alert flagged on claim.', type: 'alert' }]
-      },
-      {
-        name: 'Provider C',
-        claimsCount: 18,
-        totalClaimAmount: 216000,
-        fraudCount: 5,
-        alertCount: 3,
-        investigationCount: 1,
-        resolvedCount: 0,
-        avgClaimAmount: 12000,
-        fraudRate: 0.27,
-        riskScore: 68,
-        riskLevel: 'High',
-        maxRisk: 0.84,
-        alertsList: [],
-        casesList: [],
-        claimsList: [],
-        riskTimeline: []
-      },
-      {
-        name: 'Provider A',
-        claimsCount: 30,
-        totalClaimAmount: 145000,
-        fraudCount: 2,
-        alertCount: 1,
-        investigationCount: 1,
-        resolvedCount: 1,
-        maxRisk: 0.42,
-        avgClaimAmount: 4833,
-        fraudRate: 0.06,
-        riskScore: 24,
-        riskLevel: 'Low',
-        alertsList: [],
-        casesList: [],
-        claimsList: [],
-        riskTimeline: []
-      },
-      {
-        name: 'Provider D',
-        claimsCount: 15,
-        totalClaimAmount: 62000,
-        fraudCount: 1,
-        alertCount: 0,
-        investigationCount: 0,
-        resolvedCount: 0,
-        maxRisk: 0.35,
-        avgClaimAmount: 4133,
-        fraudRate: 0.06,
-        riskScore: 18,
-        riskLevel: 'Low',
-        alertsList: [],
-        casesList: [],
-        claimsList: [],
-        riskTimeline: []
-      }
-    ]
-  }, [])
-
-  // Final processed list combining watchlists and flag texts
+  // Final list maps straight to store state
   const finalProviders = useMemo(() => {
-    const list = history.length > 0 ? providersData : fallbackProviders
-    return list.map(p => ({
-      ...p,
-      watchlist: providerWatchlist.includes(p.name),
-      flag: providerFlags[p.name] || ''
-    }))
-  }, [providersData, fallbackProviders, history.length, providerWatchlist, providerFlags])
+    return providers
+  }, [providers])
 
   // Overview stats
   const stats = useMemo(() => {
+    if (providerMetrics) {
+      return providerMetrics
+    }
     const total = finalProviders.length
     if (total === 0) return { total: 0, highRiskCount: 0, activeCases: 0, avgRisk: 0 }
-    
+
     let highRiskCount = 0
     let activeCases = 0
     let sumRisk = 0
-    
+
     finalProviders.forEach(p => {
       sumRisk += p.riskScore
       if (p.riskScore >= 70) highRiskCount++
@@ -532,7 +371,7 @@ export default function Providers() {
       activeCases,
       avgRisk: sumRisk / total
     }
-  }, [finalProviders])
+  }, [finalProviders, providerMetrics])
 
   // Filtering list
   const filteredProviders = useMemo(() => {
@@ -607,8 +446,8 @@ export default function Providers() {
   // Dynamic drawer details selector
   const activeProviderInDrawer = useMemo(() => {
     if (!selectedProvider) return null
-    return finalProviders.find(p => p.name === selectedProvider.name) || null
-  }, [selectedProvider, finalProviders])
+    return drawerProvider || finalProviders.find(p => p.name === selectedProvider.name) || null
+  }, [selectedProvider, drawerProvider, finalProviders])
 
   // Exporters
   const handleExportCSV = () => {
