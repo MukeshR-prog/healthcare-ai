@@ -68,6 +68,22 @@ export const healthcareApi = {
   updateProviderWatchlist: (id, watchlist) => api.patch(`/api/providers/${id}/watchlist`, { watchlist }),
   updateProviderFlag: (id, flag) => api.patch(`/api/providers/${id}/flag`, { flag }),
   compareProviders: (names) => api.post('/api/providers/compare', { names }),
+  getDocuments: (params) => api.get('/api/documents', { params }),
+  getDocumentDetail: (id) => api.get(`/api/documents/${id}`),
+  getDocumentOcr: (id) => api.get(`/api/documents/${id}/ocr`),
+  getDocumentVerification: (id) => api.get(`/api/documents/${id}/verification`),
+  uploadDocument: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  },
+  addDocumentNote: (id, text) => api.post(`/api/documents/${id}/notes`, { text }),
+  deleteDocument: (id) => api.delete(`/api/documents/${id}`),
+  getDocumentMetrics: () => api.get('/api/documents/metrics'),
 }
 
 export default api

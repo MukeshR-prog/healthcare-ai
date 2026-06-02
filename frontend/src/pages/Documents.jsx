@@ -40,6 +40,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatCurrency, formatPercent } from '@/utils/format'
 import { cn } from '@/utils/cn'
+import { Spinner } from '@/components/ui/spinner'
 
 // Helpers
 const getStatusBadge = (status) => {
@@ -536,8 +537,8 @@ function DocumentDrawer({ docItem, resultItem, onClose, onAddNote, onDelete }) {
 export default function Documents() {
   const documents = useStore((state) => state.documents || [])
   const verificationResults = useStore((state) => state.verificationResults || [])
-  const addDocument = useStore((state) => state.addDocument)
-  const updateVerification = useStore((state) => state.updateVerification)
+  const fetchDocuments = useStore((state) => state.fetchDocuments)
+  const uploadDocument = useStore((state) => state.uploadDocument)
   const addVerificationNote = useStore((state) => state.addVerificationNote)
   const deleteDocument = useStore((state) => state.deleteDocument)
 
@@ -557,17 +558,10 @@ export default function Documents() {
   const [progress, setProgress] = useState(0)
   const fileInputRef = useRef(null)
 
-  // Initialize mock documents if store is empty
+  // Fetch documents from backend on mount
   useEffect(() => {
-    if (documents.length === 0) {
-      const initialDocs = generateMockDocuments()
-      const initialResults = generateMockResults()
-      initialDocs.forEach((d, idx) => {
-        addDocument(d)
-        updateVerification(d.id, d.status, initialResults[idx])
-      })
-    }
-  }, [documents.length, addDocument, updateVerification])
+    fetchDocuments()
+  }, [fetchDocuments])
 
   // Overview stats
   const stats = useMemo(() => {
@@ -654,83 +648,7 @@ export default function Documents() {
     }
   }
 
-  const simulateOCR = (fileName, fileSize) => {
-    setUploading(true)
-    setProgress(15)
-
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(timer)
-          return 95
-        }
-        return prev + 25
-      })
-    }, 450)
-
-    setTimeout(() => {
-      clearInterval(timer)
-      setProgress(100)
-      
-      setTimeout(() => {
-        setUploading(false)
-        setProgress(0)
-
-        // Generate dynamic mock OCR document matching standard fields
-        const docId = `DOC-50${String(documents.length + 1)}`
-        
-        // Randomly pick a patient and provider combination for discrepancy checks
-        const testCase = documents.length % 2 === 0
-        const patientName = testCase ? 'John Doe' : 'Alice Cooper'
-        const providerName = testCase ? 'Provider B' : 'Provider D'
-        const claimAmount = testCase ? 12000 : 7500
-        const dateOfService = '2026-05-18'
-
-        const newDoc = {
-          id: docId,
-          fileName,
-          fileSize,
-          fileType: fileName.split('.').pop() === 'pdf' ? 'application/pdf' : 'image/jpeg',
-          status: testCase ? 'Warning' : 'Verified',
-          riskLevel: testCase ? 'Medium' : 'Low',
-          patientName,
-          providerName,
-          claimAmount,
-          dateOfService,
-          diagnosisCode: 'I10',
-          procedureCode: '99213',
-          created_at: new Date().toISOString(),
-          notes: []
-        }
-
-        const newResults = {
-          docId,
-          score: testCase ? 75 : 100,
-          trustRating: testCase ? 'Good' : 'Excellent',
-          mismatchCount: testCase ? 1 : 0,
-          checks: {
-            nameMatch: testCase ? 'warning' : 'verified', // John vs Johnathan
-            providerMatch: 'verified',
-            amountMatch: 'verified',
-            dateMatch: 'verified'
-          },
-          claimValues: {
-            patientName: testCase ? 'Johnathan Doe' : 'Alice Cooper',
-            providerName,
-            claimAmount,
-            dateOfService
-          }
-        }
-
-        addDocument(newDoc)
-        updateVerification(docId, newDoc.status, newResults)
-        toast.success(`OCR completed for file ${fileName}!`)
-      }, 300)
-
-    }, 2000)
-  }
-
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
@@ -742,14 +660,50 @@ export default function Documents() {
         toast.error('Only PDF, JPG, and PNG files are accepted.')
         return
       }
-      simulateOCR(file.name, `${Math.round(file.size / 1024)} KB`)
+      
+      setUploading(true)
+      setProgress(15)
+      const timer = setInterval(() => {
+        setProgress((prev) => (prev >= 90 ? 90 : prev + 15))
+      }, 300)
+      
+      try {
+        await uploadDocument(file)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        clearInterval(timer)
+        setProgress(100)
+        setTimeout(() => {
+          setUploading(false)
+          setProgress(0)
+        }, 200)
+      }
     }
   }
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
-      simulateOCR(file.name, `${Math.round(file.size / 1024)} KB`)
+      
+      setUploading(true)
+      setProgress(15)
+      const timer = setInterval(() => {
+        setProgress((prev) => (prev >= 90 ? 90 : prev + 15))
+      }, 300)
+      
+      try {
+        await uploadDocument(file)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        clearInterval(timer)
+        setProgress(100)
+        setTimeout(() => {
+          setUploading(false)
+          setProgress(0)
+        }, 200)
+      }
     }
   }
 

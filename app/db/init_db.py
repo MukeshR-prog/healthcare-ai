@@ -53,3 +53,19 @@ def ensure_collections_and_indexes(db: Database) -> None:
     db["investigations"].create_index("created_at")
     db["investigation_notes"].create_index("case_id")
     db["investigation_timeline"].create_index("case_id")
+
+    # Document Verification Service collections
+    if "documents" not in existing:
+        db.create_collection("documents")
+    if "ocr_extractions" not in existing:
+        db.create_collection("ocr_extractions")
+    if "verification_results" not in existing:
+        db.create_collection("verification_results")
+
+    db["documents"].create_index("document_id", unique=True)
+    db["documents"].create_index("status")
+    db["documents"].create_index("uploaded_at")
+    db["ocr_extractions"].create_index("document_id", unique=True)
+    db["verification_results"].create_index("document_id", unique=True)
+    db["verification_results"].create_index("status")
+

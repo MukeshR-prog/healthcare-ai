@@ -3,6 +3,57 @@ import { persist } from 'zustand/middleware'
 import { healthcareApi } from '@/services/api'
 import toast from 'react-hot-toast'
 
+const mapBackendDoc = (d) => ({
+  id: d.id || d.document_id,
+  fileName: d.fileName || d.file_name,
+  fileType: d.fileType || d.file_type,
+  fileSize: d.fileSize || d.file_size,
+  uploaded_by: d.uploaded_by,
+  created_at: d.created_at || d.uploaded_at,
+  status: d.status,
+  riskLevel: d.riskLevel || d.risk_level,
+  patientName: d.patientName !== undefined ? d.patientName : d.patient_name,
+  providerName: d.providerName !== undefined ? d.providerName : d.provider_name,
+  claimAmount: d.claimAmount !== undefined ? d.claimAmount : d.claim_amount,
+  dateOfService: d.dateOfService !== undefined ? d.dateOfService : d.date_of_service,
+  diagnosisCode: d.diagnosisCode !== undefined ? d.diagnosisCode : d.diagnosis_code,
+  procedureCode: d.procedureCode !== undefined ? d.procedureCode : d.procedure_code,
+  notes: (d.notes || []).map(n => ({
+    text: n.text,
+    date: n.date,
+    analyst: n.analyst
+  }))
+})
+
+const mapBackendVerification = (d) => {
+  const v = d.verification
+  if (!v) return null
+  
+  let trustRating = 'Excellent'
+  if (v.verification_score >= 90) trustRating = 'Excellent'
+  else if (v.verification_score >= 50) trustRating = 'Good'
+  else trustRating = 'Suspicious'
+  
+  return {
+    docId: d.id || d.document_id,
+    score: v.verification_score,
+    trustRating: trustRating,
+    mismatchCount: v.mismatch_count,
+    checks: {
+      nameMatch: v.checks?.nameMatch,
+      providerMatch: v.checks?.providerMatch,
+      amountMatch: v.checks?.amountMatch,
+      dateMatch: v.checks?.dateMatch
+    },
+    claimValues: {
+      patientName: v.claim_values?.patientName || v.claim_values?.patient_name,
+      providerName: v.claim_values?.providerName || v.claim_values?.provider_name,
+      claimAmount: v.claim_values?.claimAmount || v.claim_values?.claim_amount,
+      dateOfService: v.claim_values?.dateOfService || v.claim_values?.date_of_service
+    }
+  }
+}
+
 export const useStore = create(
   persist(
     (set) => ({
@@ -269,51 +320,70 @@ export const useStore = create(
           console.error("Failed to fetch provider trends from backend:", error)
         }
       },
-      addDocument: (doc) =>
-        set((state) => ({
-          documents: [doc, ...state.documents],
-        })),
-      updateVerification: (docId, status, results) =>
-        set((state) => {
-          const nextDocs = state.documents.map((d) =>
-            d.id === docId ? { ...d, status, updated_at: new Date().toISOString() } : d
-          )
-          const exists = state.verificationResults.some((r) => r.docId === docId)
-          const nextResults = exists
-            ? state.verificationResults.map((r) =>
-                r.docId === docId
-                  ? { ...r, ...results, updated_at: new Date().toISOString() }
-                  : r
-              )
-            : [
-                ...state.verificationResults,
-                {
-                  docId,
-                  ...results,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                },
-              ]
-          return { documents: nextDocs, verificationResults: nextResults }
-        }),
-      addVerificationNote: (docId, text, analyst = 'Analyst') =>
-        set((state) => {
-          const nextDocs = state.documents.map((d) =>
-            d.id === docId
-              ? {
-                  ...d,
-                  notes: [...(d.notes || []), { text, date: new Date().toISOString(), analyst }],
-                  updated_at: new Date().toISOString(),
-                }
-              : d
-          )
-          return { documents: nextDocs }
-        }),
-      deleteDocument: (docId) =>
-        set((state) => ({
-          documents: state.documents.filter((d) => d.id !== docId),
-          verificationResults: state.verificationResults.filter((r) => r.docId !== docId),
-        })),
+      fetchDocuments: async (params) => {
+        try {
+          const response = await healthcareApi.getDocuments(params)
+          if (response && response.data) {
+            const docs = response.data.map(mapBackendDoc)
+            const verificationResults = response.data.map(mapBackendVerification).filter(Boolean)
+            set({ documents: docs, verificationResults })
+          }
+        } catch (error) {
+          console.error("Failed to fetch documents from backend:", error)
+        }
+      },
+      uploadDocument: async (file) => {
+        try {
+          const response = await healthcareApi.uploadDocument(file)
+          if (response && response.data) {
+            const d = response.data
+            const mappedDoc = mapBackendDoc(d)
+            const mappedVer = mapBackendVerification(d)
+            
+            set((state) => {
+              const nextDocs = [mappedDoc, ...state.documents.filter(x => x.id !== mappedDoc.id)]
+              const nextResults = mappedVer 
+                ? [mappedVer, ...state.verificationResults.filter(x => x.docId !== mappedDoc.id)]
+                : state.verificationResults
+              return { documents: nextDocs, verificationResults: nextResults }
+            })
+            return mappedDoc
+          }
+        } catch (error) {
+          console.error("Failed to upload document to backend:", error)
+          toast.error("Failed to upload document: " + (error.response?.data?.detail || error.message))
+        }
+      },
+      addVerificationNote: async (docId, text, analyst = 'Analyst') => {
+        if (!text || !text.trim()) {
+          toast.error('Please enter a note before submitting.')
+          return
+        }
+        try {
+          const response = await healthcareApi.addDocumentNote(docId, text)
+          if (response && response.data) {
+            const updatedDoc = mapBackendDoc(response.data)
+            set((state) => ({
+              documents: state.documents.map((d) => (d.id === docId ? updatedDoc : d))
+            }))
+          }
+        } catch (error) {
+          console.error("Failed to add note to document on backend:", error)
+          toast.error("Failed to save note: " + (error.response?.data?.detail || error.message))
+        }
+      },
+      deleteDocument: async (docId) => {
+        try {
+          await healthcareApi.deleteDocument(docId)
+          set((state) => ({
+            documents: state.documents.filter((d) => d.id !== docId),
+            verificationResults: state.verificationResults.filter((r) => r.docId !== docId),
+          }))
+        } catch (error) {
+          console.error("Failed to delete document from backend:", error)
+          toast.error("Failed to delete document: " + (error.response?.data?.detail || error.message))
+        }
+      },
       saveNetworkView: (view) =>
         set((state) => ({
           savedNetworkViews: [view, ...state.savedNetworkViews],
