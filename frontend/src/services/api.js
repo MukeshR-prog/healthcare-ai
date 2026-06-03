@@ -84,6 +84,12 @@ export const healthcareApi = {
   addDocumentNote: (id, text) => api.post(`/api/documents/${id}/notes`, { text }),
   deleteDocument: (id) => api.delete(`/api/documents/${id}`),
   getDocumentMetrics: () => api.get('/api/documents/metrics'),
+  getExplanations: (params) => api.get('/api/explanations', { params }),
+  getExplanationDetail: (id) => api.get(`/api/explanations/${id}`),
+  getExplanationFeatures: (id) => api.get(`/api/explanations/${id}/features`),
+  getExplanationInsights: (id) => api.get(`/api/explanations/${id}/insights`),
+  getExplanationMetrics: () => api.get('/api/explanations/metrics'),
+  syncExplanations: () => api.post('/api/explanations/sync'),
 }
 
 export default api

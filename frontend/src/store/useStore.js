@@ -79,6 +79,11 @@ export const useStore = create(
       providerFlags: {},
       documents: [],
       verificationResults: [],
+      explanations: [],
+      activeExplanation: null,
+      activeFeatures: [],
+      activeInsights: null,
+      explanationMetrics: null,
       networkAnnotations: {},
       savedNetworkViews: [],
       copilotChats: [],
@@ -382,6 +387,74 @@ export const useStore = create(
         } catch (error) {
           console.error("Failed to delete document from backend:", error)
           toast.error("Failed to delete document: " + (error.response?.data?.detail || error.message))
+        }
+      },
+      fetchExplanations: async (params) => {
+        try {
+          const response = await healthcareApi.getExplanations(params)
+          if (response && response.data) {
+            set({ explanations: response.data })
+          }
+        } catch (error) {
+          console.error("Failed to fetch explanations:", error)
+        }
+      },
+      fetchExplanationDetails: async (predictionId) => {
+        try {
+          set({ activeFeatures: [], activeExplanation: null, activeInsights: null })
+          
+          const [expRes, featRes, insRes] = await Promise.allSettled([
+            healthcareApi.getExplanationDetail(predictionId),
+            healthcareApi.getExplanationFeatures(predictionId),
+            healthcareApi.getExplanationInsights(predictionId)
+          ])
+          
+          const newState = {}
+          if (expRes.status === 'fulfilled' && expRes.value) {
+            newState.activeExplanation = expRes.value.data
+          }
+          if (featRes.status === 'fulfilled' && featRes.value) {
+            newState.activeFeatures = featRes.value.data.map(f => ({
+              name: f.featureName,
+              value: f.contributionScore,
+              rawValue: f.featureValue,
+              direction: f.direction,
+              desc: f.featureName === 'Claim Amount' ? (parseFloat(f.featureValue.replace(/[$,]/g, '')) > 10000 ? 'Outlier Billing Band' : 'Normal Range') :
+                    f.featureName === 'Provider Billing Frequency' ? (f.featureValue.includes('Provider B') || f.featureValue.includes('Provider C') ? 'Elevated Provider Infraction Rate' : 'Low Baseline Provider Risk') :
+                    f.featureName === 'Number of Procedures' ? (parseInt(f.featureValue) > 3 ? 'Excessive Single-Visit Procedures' : 'Standard Procedure Volume') :
+                    f.featureName === 'Age Demographic Outlier' ? ((parseInt(f.featureValue) > 65 || parseInt(f.featureValue) < 25) ? 'High-Risk Demographic Bracket' : 'Average Risk Cohort') :
+                    (f.direction === 'positive' ? 'Elevated Historic Recurrence' : 'Clean Profile History')
+            }))
+          }
+          if (insRes.status === 'fulfilled' && insRes.value) {
+            newState.activeInsights = insRes.value.data
+          }
+          
+          set(newState)
+        } catch (error) {
+          console.error("Failed to fetch explanation details:", error)
+        }
+      },
+      fetchExplanationMetrics: async () => {
+        try {
+          const response = await healthcareApi.getExplanationMetrics()
+          if (response && response.data) {
+            set({ explanationMetrics: response.data })
+          }
+        } catch (error) {
+          console.error("Failed to fetch explanation metrics:", error)
+        }
+      },
+      triggerExplanationSync: async () => {
+        try {
+          const response = await healthcareApi.syncExplanations()
+          if (response && response.data) {
+            toast.success(`Synced ${response.data.synced_count} predictions successfully!`)
+            return response.data
+          }
+        } catch (error) {
+          console.error("Failed to sync explanations:", error)
+          toast.error("Failed to sync explanations.")
         }
       },
       saveNetworkView: (view) =>

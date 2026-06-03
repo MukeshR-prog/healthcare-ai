@@ -160,6 +160,10 @@ const generateFallbackHistory = () => {
 export default function AIInsights() {
   const history = useStore((state) => state.history)
   const loading = useStore((state) => state.loadingByKey?.history)
+  const activeFeatures = useStore((state) => state.activeFeatures || [])
+  const activeExplanation = useStore((state) => state.activeExplanation)
+  const activeInsights = useStore((state) => state.activeInsights)
+  const fetchExplanationDetails = useStore((state) => state.fetchExplanationDetails)
   const { fetchHistory } = useApi()
 
   // Selection states
@@ -179,6 +183,16 @@ export default function AIInsights() {
   useEffect(() => {
     fetchHistory()
   }, [fetchHistory])
+
+  // Fetch explainability details when selected item changes
+  useEffect(() => {
+    if (selectedItem) {
+      const predId = selectedItem.latest_prediction?.id || selectedItem.latest_prediction?._id || selectedItem.id
+      if (predId) {
+        fetchExplanationDetails(predId)
+      }
+    }
+  }, [selectedItem, fetchExplanationDetails])
 
   // Process data source
   const dataList = useMemo(() => {
@@ -251,9 +265,10 @@ export default function AIInsights() {
 
   // SHAP calculation for selected claim
   const shapValues = useMemo(() => {
+    if (activeFeatures && activeFeatures.length > 0) return activeFeatures
     if (!selectedItem) return []
     return calculateShap(selectedItem)
-  }, [selectedItem])
+  }, [selectedItem, activeFeatures])
 
   // Filtered claims
   const filteredClaims = useMemo(() => {
@@ -328,28 +343,25 @@ export default function AIInsights() {
     if (!selectedItem) return null
     const isFraud = selectedItem.latest_prediction?.prediction === 1
     const conf = selectedItem.latest_prediction?.confidence || 0
-    const prob = isFraud ? conf : 1 - conf
+    const prob = activeExplanation ? activeExplanation.fraud_probability : (isFraud ? Math.max(conf, 0.5) : Math.min(conf, 0.49))
+    const riskLevel = activeExplanation ? activeExplanation.risk_level : (prob >= 0.90 ? 'Critical' : prob >= 0.75 ? 'High' : prob >= 0.50 ? 'Medium' : 'Low')
     
-    let riskLevel = 'Low'
     let badgeTone = 'success'
     let textColor = 'text-emerald-600 dark:text-emerald-400'
     let progressBg = 'bg-emerald-500'
     let strokeColor = '#10b981'
 
-    if (prob >= 0.90) {
-      riskLevel = 'Critical'
+    if (riskLevel === 'Critical') {
       badgeTone = 'danger'
       textColor = 'text-rose-600 dark:text-rose-400'
       progressBg = 'bg-rose-600'
       strokeColor = '#f43f5e'
-    } else if (prob >= 0.75) {
-      riskLevel = 'High'
+    } else if (riskLevel === 'High') {
       badgeTone = 'danger'
       textColor = 'text-orange-500 dark:text-orange-400'
       progressBg = 'bg-orange-500'
       strokeColor = '#f97316'
-    } else if (prob >= 0.50) {
-      riskLevel = 'Medium'
+    } else if (riskLevel === 'Medium') {
       badgeTone = 'info'
       textColor = 'text-amber-500 dark:text-amber-400'
       progressBg = 'bg-amber-500'
@@ -366,7 +378,7 @@ export default function AIInsights() {
       progressBg,
       strokeColor
     }
-  }, [selectedItem])
+  }, [selectedItem, activeExplanation])
 
   // Recharts Risk Level Pie Chart Data
   const riskLevelChartData = useMemo(() => {
@@ -991,7 +1003,7 @@ Action Plan: Highly recommend manual billing audit check on provider due to anom
                     Observations
                   </span>
                   <p className='text-slate-700 dark:text-slate-300 font-semibold italic'>
-                    "{selectedItem.latest_prediction.summary}"
+                    "{activeInsights ? activeInsights.summary : selectedItem.latest_prediction.summary}"
                   </p>
                 </div>
 
@@ -1012,11 +1024,19 @@ Action Plan: Highly recommend manual billing audit check on provider due to anom
                     <AlertTriangle className='h-5 w-5 shrink-0 text-sky-600 dark:text-sky-400' />
                     <div>
                       <p className='font-bold text-[11.5px] leading-tight'>Compliance Auditor Alert</p>
-                      <p className='mt-1 text-[10px] leading-relaxed text-slate-500 dark:text-slate-450'>
-                        {selectedClaimDetails.isFraud
-                          ? 'Review claims billing provider charts. Outlier codes and high procedure count represent elevated billing infractions probability.'
-                          : 'Standard claim profile. Conforms to peer-group baseline. Proceed with standard claims disbursement queue.'}
-                      </p>
+                      {activeInsights && activeInsights.recommendations ? (
+                        <ul className='mt-1 list-disc pl-4 text-[10px] leading-relaxed text-slate-550 dark:text-slate-400 space-y-0.5'>
+                          {activeInsights.recommendations.map((rec, i) => (
+                            <li key={i}>{rec}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className='mt-1 text-[10px] leading-relaxed text-slate-500 dark:text-slate-450'>
+                          {selectedClaimDetails.isFraud
+                            ? 'Review claims billing provider charts. Outlier codes and high procedure count represent elevated billing infractions probability.'
+                            : 'Standard claim profile. Conforms to peer-group baseline. Proceed with standard claims disbursement queue.'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

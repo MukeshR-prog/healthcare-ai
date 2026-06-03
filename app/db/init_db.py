@@ -69,3 +69,21 @@ def ensure_collections_and_indexes(db: Database) -> None:
     db["verification_results"].create_index("document_id", unique=True)
     db["verification_results"].create_index("status")
 
+    # Explainability Service collections
+    if "explanations" not in existing:
+        db.create_collection("explanations")
+    if "feature_contributions" not in existing:
+        db.create_collection("feature_contributions")
+    if "prediction_insights" not in existing:
+        db.create_collection("prediction_insights")
+
+    db["explanations"].create_index("prediction_id", unique=True)
+    db["explanations"].create_index("claim_id")
+    db["explanations"].create_index("generated_at")
+    db["explanations"].create_index("risk_level")
+    
+    db["feature_contributions"].create_index("prediction_id")
+    db["feature_contributions"].create_index("feature_name")
+    
+    db["prediction_insights"].create_index("prediction_id", unique=True)
+
