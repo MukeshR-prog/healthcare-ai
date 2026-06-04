@@ -491,30 +491,102 @@ export const useStore = create(
             c.id === messageId ? { ...c, isPinned: !c.isPinned } : c
           ),
         })),
-      createReport: (report) =>
-        set((state) => ({
-          reports: [report, ...state.reports],
-        })),
-      deleteReport: (id) =>
-        set((state) => ({
-          reports: state.reports.filter((r) => r.id !== id),
-        })),
-      duplicateReport: (id) =>
-        set((state) => {
-          const target = state.reports.find((r) => r.id === id)
-          if (!target) return {}
-          const duplicate = {
-            ...target,
-            id: `REP-${Date.now()}`,
-            title: `${target.title} (Copy)`,
-            date: new Date().toISOString(),
+      fetchReports: async () => {
+        try {
+          const res = await healthcareApi.getReports()
+          set({ reports: res.data })
+        } catch (err) {
+          console.error("Failed to fetch reports:", err)
+        }
+      },
+      fetchTemplates: async () => {
+        try {
+          const res = await healthcareApi.getTemplates()
+          set({ reportTemplates: res.data })
+        } catch (err) {
+          console.error("Failed to fetch templates:", err)
+        }
+      },
+      fetchComplianceMetrics: async () => {
+        try {
+          const res = await healthcareApi.getComplianceMetrics()
+          set({ complianceMetrics: res.data })
+          return res.data
+        } catch (err) {
+          console.error("Failed to fetch compliance metrics:", err)
+        }
+      },
+      fetchAuditLogs: async () => {
+        try {
+          // Check role first: only allowed for Admin, Auditor, Senior Analyst
+          const role = get().auth?.user?.role
+          if (role && ["Admin", "Auditor", "Senior Analyst"].includes(role)) {
+            const res = await healthcareApi.getAuditLogs()
+            // Map backend audit log fields to what Reports.jsx expects:
+            // id, action, details, date, analyst
+            const mapped = res.data.map(log => ({
+              id: log.id || log._id,
+              action: log.event_type || log.eventType || "Event",
+              details: log.description || "",
+              date: log.created_at || log.createdAt || new Date().toISOString(),
+              analyst: log.performed_by || log.performedBy || "system"
+            }))
+            set({ auditLogs: mapped })
           }
-          return { reports: [duplicate, ...state.reports] }
-        }),
-      saveTemplate: (template) =>
-        set((state) => ({
-          reportTemplates: [template, ...state.reportTemplates],
-        })),
+        } catch (err) {
+          console.error("Failed to fetch audit logs:", err)
+        }
+      },
+      createReport: async (reportPayload) => {
+        try {
+          const res = await healthcareApi.generateReport(reportPayload)
+          set((state) => ({
+            reports: [res.data, ...state.reports],
+          }))
+          return res.data
+        } catch (err) {
+          console.error("Failed to generate report:", err)
+        }
+      },
+      deleteReport: async (id) => {
+        try {
+          await healthcareApi.deleteReport(id)
+          set((state) => ({
+            reports: state.reports.filter((r) => r.id !== id && r.reportId !== id),
+          }))
+        } catch (err) {
+          console.error("Failed to delete report:", err)
+        }
+      },
+      duplicateReport: async (id) => {
+        try {
+          const state = get()
+          const target = state.reports.find((r) => r.id === id || r.reportId === id)
+          if (!target) return
+          // target filters has timeRange
+          const timeRange = target.filters?.timeRange || "Last 30 Days"
+          const res = await healthcareApi.generateReport({
+            title: `${target.title} (Copy)`,
+            reportType: target.reportType || target.type,
+            timeRange: timeRange
+          })
+          set((state) => ({
+            reports: [res.data, ...state.reports],
+          }))
+        } catch (err) {
+          console.error("Failed to duplicate report:", err)
+        }
+      },
+      saveTemplate: async (templatePayload) => {
+        try {
+          const res = await healthcareApi.saveTemplate(templatePayload)
+          set((state) => ({
+            reportTemplates: [res.data, ...state.reportTemplates],
+          }))
+        } catch (err) {
+          console.error("Failed to save template:", err)
+        }
+      },
       createAuditLog: (log) =>
         set((state) => ({
           auditLogs: [log, ...state.auditLogs],

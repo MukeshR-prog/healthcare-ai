@@ -90,6 +90,17 @@ export const healthcareApi = {
   getExplanationInsights: (id) => api.get(`/api/explanations/${id}/insights`),
   getExplanationMetrics: () => api.get('/api/explanations/metrics'),
   syncExplanations: () => api.post('/api/explanations/sync'),
+  getReports: (params) => api.get('/api/reports', { params }),
+  getReportDetail: (id) => api.get(`/api/reports/${id}`),
+  generateReport: (payload) => api.post('/api/reports/generate', payload),
+  deleteReport: (id) => api.delete(`/api/reports/${id}`),
+  getTemplates: () => api.get('/api/reports/templates'),
+  saveTemplate: (payload) => api.post('/api/reports/templates', payload),
+  getComplianceMetrics: () => api.get('/api/reports/compliance'),
+  getExports: () => api.get('/api/reports/exports'),
+  exportReportPDF: (reportId) => api.post('/api/reports/export/pdf', { reportId }, { responseType: 'blob' }),
+  exportReportCSV: (reportId) => api.post('/api/reports/export/csv', { reportId }, { responseType: 'blob' }),
+  getAuditLogs: () => api.get('/api/audit/activity-feed'),
 }
 
 export default api
