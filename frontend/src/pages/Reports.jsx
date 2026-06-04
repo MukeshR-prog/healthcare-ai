@@ -49,6 +49,7 @@ import {
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { useApi } from '@/hooks/useApi'
+import { healthcareApi } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -80,6 +81,14 @@ export default function Reports() {
   const reports = useStore((state) => state.reports || [])
   const reportTemplates = useStore((state) => state.reportTemplates || [])
   const auditLogs = useStore((state) => state.auditLogs || [])
+  const complianceMetrics = useStore((state) => state.complianceMetrics || null)
+  const user = useStore((state) => state.auth?.user)
+  const userRole = user?.role || 'Analyst'
+  
+  const fetchReports = useStore((state) => state.fetchReports)
+  const fetchTemplates = useStore((state) => state.fetchTemplates)
+  const fetchComplianceMetrics = useStore((state) => state.fetchComplianceMetrics)
+  const fetchAuditLogs = useStore((state) => state.fetchAuditLogs)
   
   const createReport = useStore((state) => state.createReport)
   const deleteReport = useStore((state) => state.deleteReport)
@@ -106,69 +115,28 @@ export default function Reports() {
   // Fetch data on mount
   useEffect(() => {
     fetchHistory()
-  }, [fetchHistory])
+    fetchReports()
+    fetchTemplates()
+    if (['Senior Analyst', 'Auditor', 'Admin'].includes(userRole)) {
+      fetchComplianceMetrics()
+      fetchAuditLogs()
+    }
+  }, [fetchHistory, fetchReports, fetchTemplates, fetchComplianceMetrics, fetchAuditLogs, userRole])
 
-  // Initialize preset templates & mock audit logs if empty
+  // Initialize preset templates if empty
   useEffect(() => {
-    if (reportTemplates.length === 0) {
+    if (reportTemplates.length === 0 && ['Senior Analyst', 'Auditor', 'Admin'].includes(userRole)) {
       const presets = [
-        { id: 'tpl-1', title: 'Monthly Fraud Report', type: 'Fraud Loss Summary', timeRange: 'Last 30 Days', desc: 'Focuses on billing spikes, anomaly prediction rates, and claim volume distribution.' },
-        { id: 'tpl-2', title: 'Executive Summary Brief', type: 'Executive Summary', timeRange: 'Last 30 Days', desc: 'Overview brief of loss estimates, open cases, and investigation closure metrics.' },
-        { id: 'tpl-3', title: 'Compliance Audit Dossier', type: 'Compliance Document Audit', timeRange: 'Last 90 Days', desc: 'OCR verification mismatch ratios, coverage counts, and readiness checklist.' },
-        { id: 'tpl-4', title: 'Provider Risk Rankings', type: 'Provider Risk Review', timeRange: 'Last 30 Days', desc: 'High-risk provider profiling, watchlist status updates, and Flag annotations.' }
+        { title: 'Monthly Fraud Report', type: 'Fraud Loss Summary', timeRange: 'Last 30 Days', desc: 'Focuses on billing spikes, anomaly prediction rates, and claim volume distribution.' },
+        { title: 'Executive Summary Brief', type: 'Executive Summary', timeRange: 'Last 30 Days', desc: 'Overview brief of loss estimates, open cases, and investigation closure metrics.' },
+        { title: 'Compliance Audit Dossier', type: 'Compliance Document Audit', timeRange: 'Last 90 Days', desc: 'OCR verification mismatch ratios, coverage counts, and readiness checklist.' },
+        { title: 'Provider Risk Rankings', type: 'Provider Risk Review', timeRange: 'Last 30 Days', desc: 'High-risk provider profiling, watchlist status updates, and Flag annotations.' }
       ]
       presets.forEach(p => saveTemplate(p))
     }
+  }, [reportTemplates.length, saveTemplate, userRole])
 
-    if (auditLogs.length === 0) {
-      const initialLogs = [
-        { id: `aud-1`, action: 'Case Escalated', details: 'Alert AL-9901 escalated into Case CASE-9901.', date: new Date(Date.now() - 3600000 * 2).toISOString(), analyst: 'Analyst Sarah' },
-        { id: `aud-2`, action: 'Document Rejected', details: 'OCR verification mismatch on DOC-201 (double-billing).', date: new Date(Date.now() - 3600000 * 6).toISOString(), analyst: 'System Engine' },
-        { id: `aud-3`, action: 'Watchlist Status Updated', details: 'Provider B flag recorded: "Suspected upcoding".', date: new Date(Date.now() - 3600000 * 12).toISOString(), analyst: 'Analyst Dave' },
-        { id: `aud-4`, action: 'Report Compiled', details: 'Executive Summary compiled successfully.', date: new Date(Date.now() - 3600000 * 24).toISOString(), analyst: 'Analyst Sarah' }
-      ]
-      initialLogs.forEach(log => createAuditLog(log))
-    }
-  }, [reportTemplates, auditLogs, saveTemplate, createAuditLog])
-
-  // Initial mock reports if empty
-  useEffect(() => {
-    if (reports.length === 0 && history.length === 0) {
-      const mockReports = [
-        {
-          id: 'REP-101',
-          title: 'May 2026 Executive Fraud Summary',
-          type: 'Executive Summary',
-          timeRange: 'Last 30 Days',
-          date: new Date(2026, 4, 25).toISOString(),
-          creator: 'Analyst Sarah',
-          summary: 'Aggregate assessment of active fraud claims, open cases, and OCR clinical audits. High-risk groupings continue to cluster around Provider B.',
-          metrics: {
-            lossEstimate: 536050,
-            openCases: 3,
-            flaggedClaims: 8,
-            mismatchDocs: 2,
-            readiness: 88
-          },
-          chartsData: [
-            { name: 'Provider B', value: 82 },
-            { name: 'Provider C', value: 68 },
-            { name: 'Provider A', value: 24 },
-            { name: 'Provider D', value: 18 }
-          ],
-          tableData: [
-            { field: 'Fraud Loss Estimate', val: '$536,050' },
-            { field: 'Open Cases Count', val: '3 cases' },
-            { field: 'Verification Coverage', val: '75.2%' },
-            { field: 'Audit Readiness Score', val: '88%' }
-          ]
-        }
-      ]
-      mockReports.forEach(r => createReport(r))
-    }
-  }, [reports, history.length, createReport])
-
-  // Calculate live database figures
+  // Calculate live database figures (as fallbacks or defaults)
   const liveStats = useMemo(() => {
     // Loss Estimate
     let lossEstimate = 0
@@ -230,123 +198,92 @@ export default function Reports() {
     }
   }, [history, cases, documents, alerts])
 
-  // Generate Report Action handler
-  const handleGenerateReport = (e) => {
+  // Combine live stats with compliance metrics from the backend if available
+  const displayMetrics = useMemo(() => {
+    if (complianceMetrics) {
+      return {
+        lossEstimate: liveStats.lossEstimate,
+        openCases: liveStats.openCases,
+        highRiskCount: liveStats.highRiskCount,
+        mismatchDocs: liveStats.mismatchDocs,
+        readinessScore: complianceMetrics.complianceScore,
+        docCoverage: complianceMetrics.verificationCoverage / 100,
+        completionRate: complianceMetrics.completionRate / 100,
+        mappedClaims: liveStats.mappedClaims
+      }
+    }
+    return {
+      lossEstimate: liveStats.lossEstimate,
+      openCases: liveStats.openCases,
+      highRiskCount: liveStats.highRiskCount,
+      mismatchDocs: liveStats.mismatchDocs,
+      readinessScore: liveStats.readinessScore,
+      docCoverage: liveStats.docCoverage,
+      completionRate: liveStats.completionRate,
+      mappedClaims: liveStats.mappedClaims
+    }
+  }, [complianceMetrics, liveStats])
+
+  // Generate Report Action handler (uses backend)
+  const handleGenerateReport = async (e) => {
     if (e) e.preventDefault()
     if (!reportTitle.trim()) {
       toast.error('Please specify a report title!')
       return
     }
 
-    // Compiling dynamic data based on selected Report Type
-    let summary = ''
-    let metrics = {}
-    let tableData = []
-    let chartsData = []
-
-    if (reportType === 'Executive Summary') {
-      summary = `Platform overview covering estimated fraud exposure, verification coverage ratios, and compliance audits for ${timeRange}. Analytics point toward localized upcoding anomalies.`
-      metrics = {
-        lossEstimate: liveStats.lossEstimate,
-        openCases: liveStats.openCases,
-        flaggedClaims: liveStats.highRiskCount,
-        mismatchDocs: liveStats.mismatchDocs,
-        readiness: liveStats.readinessScore
+    try {
+      const res = await createReport({
+        title: reportTitle.trim(),
+        reportType: reportType,
+        timeRange: timeRange
+      })
+      if (res) {
+        setSelectedReportId(res.id || res.reportId)
+        setReportTitle('')
+        toast.success('Executive report generated successfully!')
+        if (['Senior Analyst', 'Auditor', 'Admin'].includes(userRole)) {
+          fetchComplianceMetrics()
+          fetchAuditLogs()
+        }
       }
-      tableData = [
-        { field: 'Loss exposure exposure', val: formatCurrency(liveStats.lossEstimate) },
-        { field: 'Active open cases', val: `${liveStats.openCases} cases` },
-        { field: 'OCR verification coverage', val: formatPercent(liveStats.docCoverage) },
-        { field: 'Audit readiness compliance', val: `${liveStats.readinessScore}%` }
-      ]
-      chartsData = [
-        { name: 'Fraud Loss', value: liveStats.lossEstimate / 1000 },
-        { name: 'Verified Claims', value: (liveStats.mappedClaims - liveStats.highRiskCount) * 10 }
-      ]
-    } else if (reportType === 'Provider Risk Review') {
-      summary = `Dynamic profiling of high-risk billing entities. Aggregates fraud rates, upcoding code clusters, and watchlist flagging annotations.`
-      metrics = {
-        lossEstimate: liveStats.lossEstimate * 0.7,
-        openCases: liveStats.openCases,
-        flaggedClaims: liveStats.highRiskCount,
-        mismatchDocs: liveStats.mismatchDocs,
-        readiness: liveStats.readinessScore
-      }
-      tableData = [
-        { field: 'Critical providers volume', val: '2 providers' },
-        { field: 'Flagged claims share', val: formatCurrency(liveStats.lossEstimate) },
-        { field: 'Watchlist additions count', val: `${providerWatchlist.length} billing entities` }
-      ]
-      chartsData = [
-        { name: 'Provider B', value: 82 },
-        { name: 'Provider C', value: 68 },
-        { name: 'Provider A', value: 24 },
-        { name: 'Provider D', value: 18 }
-      ]
-    } else {
-      // General fallbacks
-      summary = `${reportType} compiled dynamically. Evaluates anomaly spikes, verification timelines, and operational workflow backlogs.`
-      metrics = {
-        lossEstimate: liveStats.lossEstimate,
-        openCases: liveStats.openCases,
-        flaggedClaims: liveStats.highRiskCount,
-        mismatchDocs: liveStats.mismatchDocs,
-        readiness: liveStats.readinessScore
-      }
-      tableData = [
-        { field: 'Exposure Estimate', val: formatCurrency(liveStats.lossEstimate) },
-        { field: 'Open cases log', val: `${liveStats.openCases} cases` },
-        { field: 'Document checks', val: `${documents.length} forms` }
-      ]
-      chartsData = [
-        { name: 'Open cases', value: liveStats.openCases },
-        { name: 'Alerts queue', value: alerts.length || 5 },
-        { name: 'Mismatch files', value: liveStats.mismatchDocs }
-      ]
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to generate report.')
     }
-
-    const newReport = {
-      id: `REP-${Date.now()}`,
-      title: reportTitle.trim(),
-      type: reportType,
-      timeRange,
-      date: new Date().toISOString(),
-      creator: 'Analyst Sarah',
-      summary,
-      metrics,
-      tableData,
-      chartsData
-    }
-
-    createReport(newReport)
-    setSelectedReportId(newReport.id)
-    setReportTitle('')
-
-    // Append to audit activity logs
-    createAuditLog({
-      id: `aud-${Date.now()}`,
-      action: 'Report Compiled',
-      details: `Generated new "${newReport.title}" (${newReport.type}) report.`,
-      date: new Date().toISOString(),
-      analyst: 'Analyst Sarah'
-    })
-
-    toast.success('Executive report generated successfully!')
   }
 
-  // Duplicate Report
-  const handleDuplicate = (id) => {
-    duplicateReport(id)
-    toast.success('Report duplicated!')
+  // Duplicate Report (uses backend copy logic)
+  const handleDuplicate = async (id) => {
+    try {
+      await duplicateReport(id)
+      toast.success('Report duplicated!')
+      if (['Senior Analyst', 'Auditor', 'Admin'].includes(userRole)) {
+        fetchComplianceMetrics()
+        fetchAuditLogs()
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to duplicate report.')
+    }
   }
 
   // Delete Report
-  const handleDelete = (id) => {
-    deleteReport(id)
-    if (selectedReportId === id) {
-      setSelectedReportId(null)
+  const handleDelete = async (id) => {
+    try {
+      await deleteReport(id)
+      if (selectedReportId === id) {
+        setSelectedReportId(null)
+      }
+      toast.success('Report deleted.')
+      if (['Senior Analyst', 'Auditor', 'Admin'].includes(userRole)) {
+        fetchComplianceMetrics()
+        fetchAuditLogs()
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to delete report.')
     }
-    toast.success('Report deleted.')
   }
 
   // Apply Template values to form builder
@@ -367,14 +304,15 @@ export default function Reports() {
   // Library Filtering / Searching
   const filteredReports = useMemo(() => {
     return reports.filter((r) => {
+      const typeStr = r.reportType || r.type || ''
       const textMatch =
         search === '' ||
         r.title.toLowerCase().includes(search.toLowerCase()) ||
-        r.type.toLowerCase().includes(search.toLowerCase())
+        typeStr.toLowerCase().includes(search.toLowerCase())
 
       if (!textMatch) return false
 
-      if (filterType !== 'All' && r.type !== filterType) return false
+      if (filterType !== 'All' && typeStr !== filterType) return false
 
       return true
     })
@@ -382,69 +320,50 @@ export default function Reports() {
 
   const activeReportObj = useMemo(() => {
     if (!selectedReportId) return null
-    return reports.find((r) => r.id === selectedReportId) || null
+    return reports.find((r) => r.id === selectedReportId || r.reportId === selectedReportId) || null
   }, [selectedReportId, reports])
 
   // EXPORT COMPILERS
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     if (!activeReportObj) return
-    const headers = ['Metric Attribute', 'Computed Value']
-    const rows = activeReportObj.tableData.map(row => [`"${row.field}"`, `"${row.val}"`])
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `Audit_Report_${activeReportObj.id}_Export.csv`)
-    link.click()
+    try {
+      const reportId = activeReportObj.reportId || activeReportObj.id
+      const res = await healthcareApi.exportReportCSV(reportId)
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.setAttribute('href', url)
+      link.setAttribute('download', `Audit_Report_${reportId}_Export.csv`)
+      link.click()
+      toast.success('CSV Export downloaded successfully!')
+      if (['Senior Analyst', 'Auditor', 'Admin'].includes(userRole)) {
+        fetchAuditLogs()
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to export CSV.')
+    }
   }
 
-  const handleExportHTML = () => {
+  const handleExportPDF = async () => {
     if (!activeReportObj) return
-    const metricsBlock = Object.entries(activeReportObj.metrics)
-      .map(([k, v]) => `<li><strong>${k}:</strong> ${v}</li>`)
-      .join('\n')
-    const tableBlock = activeReportObj.tableData
-      .map(row => `<tr><td>${row.field}</td><td>${row.val}</td></tr>`)
-      .join('\n')
-
-    const htmlContent = `
-    <html>
-      <head>
-        <title>${activeReportObj.title}</title>
-        <style>
-          body { font-family: sans-serif; padding: 20px; color: #333; }
-          h1 { color: #0284c7; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f3f4f6; }
-        </style>
-      </head>
-      <body>
-        <h1>${activeReportObj.title}</h1>
-        <p><strong>Type:</strong> ${activeReportObj.type} | <strong>Compiled:</strong> ${new Date(activeReportObj.date).toLocaleString()}</p>
-        <hr/>
-        <h3>Executive Summary</h3>
-        <p>${activeReportObj.summary}</p>
-        <h3>Metrics Indicators</h3>
-        <ul>${metricsBlock}</ul>
-        <h3>Report Tabular Results</h3>
-        <table>
-          <thead>
-            <tr><th>Attribute</th><th>Computed Value</th></tr>
-          </thead>
-          <tbody>${tableBlock}</tbody>
-        </table>
-      </body>
-    </html>`
-
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `Audit_Report_${activeReportObj.id}_Export.html`)
-    link.click()
+    try {
+      const reportId = activeReportObj.reportId || activeReportObj.id
+      const res = await healthcareApi.exportReportPDF(reportId)
+      const blob = new Blob([res.data], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.setAttribute('href', url)
+      link.setAttribute('download', `Audit_Report_${reportId}_Export.pdf`)
+      link.click()
+      toast.success('PDF Export downloaded successfully!')
+      if (['Senior Analyst', 'Auditor', 'Admin'].includes(userRole)) {
+        fetchAuditLogs()
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to export PDF.')
+    }
   }
 
   // Dynamic Skeletons for Loading States
@@ -523,7 +442,7 @@ export default function Reports() {
             </div>
           </div>
           <p className='font-display text-2xl font-bold text-slate-900 dark:text-slate-100 mt-3'>
-            {formatCurrency(liveStats.lossEstimate)}
+            {formatCurrency(displayMetrics.lossEstimate)}
           </p>
           <p className='text-[10px] text-slate-400 font-semibold mt-1.5'>Exposure from flagged fraud claims</p>
         </motion.div>
@@ -540,7 +459,7 @@ export default function Reports() {
             </div>
           </div>
           <p className='font-display text-2xl font-bold text-slate-900 dark:text-slate-100 mt-3'>
-            {liveStats.openCases}
+            {displayMetrics.openCases}
           </p>
           <p className='text-[10px] text-slate-400 font-semibold mt-1.5'>Investigations pending final closure</p>
         </motion.div>
@@ -557,7 +476,7 @@ export default function Reports() {
             </div>
           </div>
           <p className='font-display text-2xl font-bold text-slate-900 dark:text-slate-100 mt-3'>
-            {liveStats.readinessScore}%
+            {displayMetrics.readinessScore}%
           </p>
           <p className='text-[10px] text-slate-400 font-semibold mt-1.5'>Mean compliance readiness rating</p>
         </motion.div>
@@ -722,11 +641,15 @@ export default function Reports() {
                   <div className='text-center py-6 text-xs text-slate-400 italic'>No reports found. Build one above.</div>
                 ) : (
                   filteredReports.map((r) => {
-                    const isSelected = selectedReportId === r.id
+                    const repId = r.id || r.reportId
+                    const isSelected = selectedReportId === repId
+                    const reportTypeStr = r.reportType || r.type || ""
+                    const reportDate = r.generatedAt || r.date
+                    const timeRangeStr = r.filters?.timeRange || r.timeRange || "Last 30 Days"
                     return (
                       <div
-                        key={r.id}
-                        onClick={() => setSelectedReportId(r.id)}
+                        key={repId}
+                        onClick={() => setSelectedReportId(repId)}
                         className={cn(
                           'p-3 rounded-xl border cursor-pointer flex flex-col gap-1.5 transition',
                           isSelected
@@ -737,16 +660,16 @@ export default function Reports() {
                         <div className='flex items-center justify-between'>
                           <span className='text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-40'>{r.title}</span>
                           <span className='text-[8px] bg-slate-200/80 dark:bg-slate-800 text-slate-650 dark:text-slate-350 rounded px-1.5 py-0.5 font-bold uppercase shrink-0'>
-                            {r.type}
+                            {reportTypeStr}
                           </span>
                         </div>
                         <div className='flex items-center justify-between text-[9px] text-slate-400 font-semibold'>
-                          <span>Timeframe: {r.timeRange} &bull; Compiled: {new Date(r.date).toLocaleDateString()}</span>
+                          <span>Timeframe: {timeRangeStr} &bull; Compiled: {new Date(reportDate).toLocaleDateString()}</span>
                           <div className='flex gap-1.5 z-10' onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => handleDuplicate(r.id)} title='Duplicate report' className='text-slate-405 hover:text-sky-555'>
+                            <button onClick={() => handleDuplicate(repId)} title='Duplicate report' className='text-slate-405 hover:text-sky-555'>
                               <Copy className='h-3 w-3' />
                             </button>
-                            <button onClick={() => handleDelete(r.id)} title='Delete report' className='text-slate-405 hover:text-rose-555'>
+                            <button onClick={() => handleDelete(repId)} title='Delete report' className='text-slate-405 hover:text-rose-555'>
                               <Trash2 className='h-3 w-3' />
                             </button>
                           </div>
@@ -797,13 +720,13 @@ export default function Reports() {
                   <CardHeader className='pb-3 bg-slate-50/50 dark:bg-slate-900/20 border-b border-slate-100 dark:border-slate-900 flex flex-row items-center justify-between'>
                     <div>
                       <Badge className='bg-sky-505/10 text-sky-655 border-none font-bold uppercase text-[9px] mb-1.5'>
-                        {activeReportObj.type}
+                        {activeReportObj.reportType || activeReportObj.type}
                       </Badge>
                       <CardTitle className='text-sm font-bold text-slate-900 dark:text-slate-100'>
                         {activeReportObj.title}
                       </CardTitle>
                       <p className='text-[10px] text-slate-405 font-semibold mt-0.5'>
-                        Audit Period: {activeReportObj.timeRange} &bull; Generated: {new Date(activeReportObj.date).toLocaleString()}
+                        Audit Period: {activeReportObj.filters?.timeRange || activeReportObj.timeRange || "Last 30 Days"} &bull; Generated: {new Date(activeReportObj.generatedAt || activeReportObj.date).toLocaleString()}
                       </p>
                     </div>
 
@@ -815,10 +738,10 @@ export default function Reports() {
                         <Download className='h-3 w-3' /> CSV
                       </button>
                       <button
-                        onClick={handleExportHTML}
+                        onClick={handleExportPDF}
                         className='p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-[10px] font-bold text-slate-600 dark:border-slate-850 dark:hover:bg-slate-900 dark:text-slate-400 transition flex items-center gap-1 shadow-xs'
                       >
-                        <FileText className='h-3 w-3' /> HTML
+                        <FileText className='h-3 w-3' /> PDF
                       </button>
                     </div>
                   </CardHeader>
@@ -919,7 +842,7 @@ export default function Reports() {
           <div className='space-y-6'>
             <div className='print-card border border-slate-200 p-4 rounded-xl'>
               <h2 className='text-lg font-bold'>{activeReportObj.title}</h2>
-              <p className='text-xs text-slate-500 mt-1'>Type: {activeReportObj.type} | Timeframe: {activeReportObj.timeRange}</p>
+              <p className='text-xs text-slate-500 mt-1'>Type: {activeReportObj.reportType || activeReportObj.type} | Timeframe: {activeReportObj.filters?.timeRange || activeReportObj.timeRange || "Last 30 Days"}</p>
               <div className='mt-4 text-xs font-semibold whitespace-pre-wrap leading-relaxed'>{activeReportObj.summary}</div>
             </div>
 

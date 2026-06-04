@@ -87,3 +87,23 @@ def ensure_collections_and_indexes(db: Database) -> None:
     
     db["prediction_insights"].create_index("prediction_id", unique=True)
 
+    # Reporting and Compliance Engine collections
+    if "reports" not in existing:
+        db.create_collection("reports")
+    if "report_templates" not in existing:
+        db.create_collection("report_templates")
+    if "report_exports" not in existing:
+        db.create_collection("report_exports")
+
+    db["reports"].create_index("report_id", unique=True)
+    db["reports"].create_index("report_type")
+    db["reports"].create_index("generated_by")
+    db["reports"].create_index("generated_at")
+
+    db["report_templates"].create_index("template_name")
+    db["report_templates"].create_index("report_type")
+
+    db["report_exports"].create_index("report_id")
+    db["report_exports"].create_index("export_type")
+
+
