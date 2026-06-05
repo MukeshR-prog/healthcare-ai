@@ -11,7 +11,10 @@ from app.schemas.report import (
     TemplateResponse,
     TemplateCreateRequest,
     ComplianceMetricsResponse,
-    ExportResponse
+    ExportResponse,
+    DashboardMetricsResponse,
+    ScheduleResponse,
+    ScheduleCreateRequest
 )
 from app.models.report import ReportTemplate
 from app.repositories.report_repository import ReportRepository
@@ -19,6 +22,7 @@ from app.services.report_service import ReportService
 from app.services.compliance_service import ComplianceService
 from app.services.export_service import ExportService
 from app.services.audit_service import AuditService
+from app.services.scheduled_report_service import ScheduledReportService
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -209,6 +213,64 @@ def export_csv_endpoint(
             "Content-Disposition": f"attachment; filename=Report_{payload.report_id}.csv"
         }
     )
+
+@router.get("/dashboard", response_model=DashboardMetricsResponse)
+def get_dashboard_metrics_endpoint(
+    db: Database = Depends(get_database),
+    current_user: dict = restricted_roles_dependency
+):
+    metrics = ReportRepository.get_dashboard_metrics(db)
+    return metrics
+
+@router.post("/export/json")
+def export_json_endpoint(
+    payload: ExportRequest,
+    db: Database = Depends(get_database),
+    current_user: dict = restricted_roles_dependency
+):
+    report = ReportRepository.get_report(db, payload.report_id)
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Report not found."
+        )
+        
+    json_bytes = ExportService.export_report(
+        db=db,
+        report=report,
+        export_type="JSON",
+        operator_email=current_user.get("email", "system")
+    )
+    
+    return Response(
+        content=json_bytes,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f"attachment; filename=Report_{payload.report_id}.json"
+        }
+    )
+
+@router.get("/schedules", response_model=list[ScheduleResponse])
+def get_schedules_endpoint(
+    db: Database = Depends(get_database),
+    current_user: dict = restricted_roles_dependency
+):
+    schedules = ReportRepository.get_schedules(db)
+    return schedules
+
+@router.post("/schedules", response_model=ScheduleResponse, status_code=status.HTTP_201_CREATED)
+def create_schedule_endpoint(
+    payload: ScheduleCreateRequest,
+    db: Database = Depends(get_database),
+    current_user: dict = restricted_roles_dependency
+):
+    schedule = ScheduledReportService.register_schedule(
+        db=db,
+        report_type=payload.report_type,
+        frequency=payload.frequency,
+        created_by=current_user.get("email", "system")
+    )
+    return schedule
 
 @router.get("/{report_id}", response_model=ReportResponse)
 def get_report_endpoint(
