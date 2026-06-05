@@ -129,6 +129,8 @@ class ExportService:
         export_record = ReportExport(
             report_id=report_id,
             export_type=export_type.upper(),
+            file_size=len(file_bytes),
+            download_count=1,
             generated_by=operator_email,
             created_at=datetime.now(timezone.utc)
         )

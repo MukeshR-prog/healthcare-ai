@@ -100,6 +100,10 @@ export const healthcareApi = {
   getExports: () => api.get('/api/reports/exports'),
   exportReportPDF: (reportId) => api.post('/api/reports/export/pdf', { reportId }, { responseType: 'blob' }),
   exportReportCSV: (reportId) => api.post('/api/reports/export/csv', { reportId }, { responseType: 'blob' }),
+  exportReportJSON: (reportId) => api.post('/api/reports/export/json', { reportId }, { responseType: 'blob' }),
+  getDashboardMetrics: () => api.get('/api/reports/dashboard'),
+  getSchedules: () => api.get('/api/reports/schedules'),
+  createSchedule: (payload) => api.post('/api/reports/schedules', payload),
   getAuditLogs: () => api.get('/api/audit/activity-feed'),
 }
 

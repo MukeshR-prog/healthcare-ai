@@ -46,11 +46,11 @@ class ComplianceService:
         score = min(max(round(score, 1), 0.0), 100.0)
 
         # Categories
-        if score >= 80.0:
+        if score >= 90.0:
             category = "Excellent"
-        elif score >= 60.0:
+        elif score >= 75.0:
             category = "Good"
-        elif score >= 30.0:
+        elif score >= 50.0:
             category = "Needs Review"
         else:
             category = "Critical"

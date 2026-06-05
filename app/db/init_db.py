@@ -94,6 +94,8 @@ def ensure_collections_and_indexes(db: Database) -> None:
         db.create_collection("report_templates")
     if "report_exports" not in existing:
         db.create_collection("report_exports")
+    if "scheduled_reports" not in existing:
+        db.create_collection("scheduled_reports")
 
     db["reports"].create_index("report_id", unique=True)
     db["reports"].create_index("report_type")
@@ -105,5 +107,9 @@ def ensure_collections_and_indexes(db: Database) -> None:
 
     db["report_exports"].create_index("report_id")
     db["report_exports"].create_index("export_type")
+
+    db["scheduled_reports"].create_index("report_type")
+    db["scheduled_reports"].create_index("frequency")
+    db["scheduled_reports"].create_index("enabled")
 
 

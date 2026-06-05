@@ -98,6 +98,8 @@ export const useStore = create(
       reports: [],
       reportTemplates: [],
       auditLogs: [],
+      schedules: [],
+      dashboardMetrics: null,
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -585,6 +587,34 @@ export const useStore = create(
           }))
         } catch (err) {
           console.error("Failed to save template:", err)
+        }
+      },
+      fetchSchedules: async () => {
+        try {
+          const res = await healthcareApi.getSchedules()
+          set({ schedules: res.data })
+        } catch (err) {
+          console.error("Failed to fetch schedules:", err)
+        }
+      },
+      createSchedule: async (schedulePayload) => {
+        try {
+          const res = await healthcareApi.createSchedule(schedulePayload)
+          set((state) => ({
+            schedules: [res.data, ...state.schedules],
+          }))
+          return res.data
+        } catch (err) {
+          console.error("Failed to create schedule:", err)
+        }
+      },
+      fetchDashboardMetrics: async () => {
+        try {
+          const res = await healthcareApi.getDashboardMetrics()
+          set({ dashboardMetrics: res.data })
+          return res.data
+        } catch (err) {
+          console.error("Failed to fetch dashboard metrics:", err)
         }
       },
       createAuditLog: (log) =>

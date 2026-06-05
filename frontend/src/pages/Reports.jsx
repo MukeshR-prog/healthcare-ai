@@ -82,6 +82,8 @@ export default function Reports() {
   const reportTemplates = useStore((state) => state.reportTemplates || [])
   const auditLogs = useStore((state) => state.auditLogs || [])
   const complianceMetrics = useStore((state) => state.complianceMetrics || null)
+  const schedules = useStore((state) => state.schedules || [])
+  const dashboardMetrics = useStore((state) => state.dashboardMetrics || null)
   const user = useStore((state) => state.auth?.user)
   const userRole = user?.role || 'Analyst'
   
@@ -89,11 +91,14 @@ export default function Reports() {
   const fetchTemplates = useStore((state) => state.fetchTemplates)
   const fetchComplianceMetrics = useStore((state) => state.fetchComplianceMetrics)
   const fetchAuditLogs = useStore((state) => state.fetchAuditLogs)
+  const fetchSchedules = useStore((state) => state.fetchSchedules)
+  const fetchDashboardMetrics = useStore((state) => state.fetchDashboardMetrics)
   
   const createReport = useStore((state) => state.createReport)
   const deleteReport = useStore((state) => state.deleteReport)
   const duplicateReport = useStore((state) => state.duplicateReport)
   const saveTemplate = useStore((state) => state.saveTemplate)
+  const createSchedule = useStore((state) => state.createSchedule)
   const createAuditLog = useStore((state) => state.createAuditLog)
   
   const loading = useStore((state) => state.loadingByKey?.history)
@@ -120,8 +125,10 @@ export default function Reports() {
     if (['Senior Analyst', 'Auditor', 'Admin'].includes(userRole)) {
       fetchComplianceMetrics()
       fetchAuditLogs()
+      fetchDashboardMetrics()
+      fetchSchedules()
     }
-  }, [fetchHistory, fetchReports, fetchTemplates, fetchComplianceMetrics, fetchAuditLogs, userRole])
+  }, [fetchHistory, fetchReports, fetchTemplates, fetchComplianceMetrics, fetchAuditLogs, fetchDashboardMetrics, fetchSchedules, userRole])
 
   // Initialize preset templates if empty
   useEffect(() => {
@@ -135,6 +142,18 @@ export default function Reports() {
       presets.forEach(p => saveTemplate(p))
     }
   }, [reportTemplates.length, saveTemplate, userRole])
+  
+  // Synchronize schedules with active state
+  useEffect(() => {
+    if (schedules && schedules.length > 0) {
+      const active = schedules.some(s => s.enabled)
+      setScheduleActive(active)
+      const enabledSchedule = schedules.find(s => s.enabled)
+      if (enabledSchedule) {
+        setSchedulePref(enabledSchedule.frequency)
+      }
+    }
+  }, [schedules])
 
   // Calculate live database figures (as fallbacks or defaults)
   const liveStats = useMemo(() => {
@@ -200,6 +219,18 @@ export default function Reports() {
 
   // Combine live stats with compliance metrics from the backend if available
   const displayMetrics = useMemo(() => {
+    if (dashboardMetrics) {
+      return {
+        lossEstimate: dashboardMetrics.fraud_loss_estimate,
+        openCases: dashboardMetrics.open_cases,
+        highRiskCount: dashboardMetrics.high_risk_providers,
+        mismatchDocs: dashboardMetrics.critical_alerts,
+        readinessScore: dashboardMetrics.compliance_score,
+        docCoverage: dashboardMetrics.verification_success_rate / 100,
+        completionRate: dashboardMetrics.verification_success_rate / 100,
+        mappedClaims: liveStats.mappedClaims
+      }
+    }
     if (complianceMetrics) {
       return {
         lossEstimate: liveStats.lossEstimate,
@@ -222,7 +253,7 @@ export default function Reports() {
       completionRate: liveStats.completionRate,
       mappedClaims: liveStats.mappedClaims
     }
-  }, [complianceMetrics, liveStats])
+  }, [dashboardMetrics, complianceMetrics, liveStats])
 
   // Generate Report Action handler (uses backend)
   const handleGenerateReport = async (e) => {
@@ -295,10 +326,23 @@ export default function Reports() {
   }
 
   // Configure Scheduling Preferences
-  const handleSaveSchedule = (e) => {
+  const handleSaveSchedule = async (e) => {
     e.preventDefault()
-    setScheduleActive(true)
-    toast.success(`Report email delivery scheduled (${schedulePref})!`)
+    try {
+      const res = await createSchedule({
+        reportType: reportType,
+        frequency: schedulePref,
+        enabled: true
+      })
+      if (res) {
+        setScheduleActive(true)
+        toast.success(`Report email delivery scheduled (${schedulePref})!`)
+        fetchSchedules()
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to register schedule.')
+    }
   }
 
   // Library Filtering / Searching
@@ -363,6 +407,27 @@ export default function Reports() {
     } catch (err) {
       console.error(err)
       toast.error('Failed to export PDF.')
+    }
+  }
+
+  const handleExportJSON = async () => {
+    if (!activeReportObj) return
+    try {
+      const reportId = activeReportObj.reportId || activeReportObj.id
+      const res = await healthcareApi.exportReportJSON(reportId)
+      const blob = new Blob([res.data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.setAttribute('href', url)
+      link.setAttribute('download', `Audit_Report_${reportId}_Export.json`)
+      link.click()
+      toast.success('JSON Export downloaded successfully!')
+      if (['Senior Analyst', 'Auditor', 'Admin'].includes(userRole)) {
+        fetchAuditLogs()
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to export JSON.')
     }
   }
 
@@ -742,6 +807,12 @@ export default function Reports() {
                         className='p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-[10px] font-bold text-slate-600 dark:border-slate-850 dark:hover:bg-slate-900 dark:text-slate-400 transition flex items-center gap-1 shadow-xs'
                       >
                         <FileText className='h-3 w-3' /> PDF
+                      </button>
+                      <button
+                        onClick={handleExportJSON}
+                        className='p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-[10px] font-bold text-slate-600 dark:border-slate-850 dark:hover:bg-slate-900 dark:text-slate-400 transition flex items-center gap-1 shadow-xs'
+                      >
+                        <SlidersHorizontal className='h-3 w-3' /> JSON
                       </button>
                     </div>
                   </CardHeader>
