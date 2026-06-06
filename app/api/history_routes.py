@@ -1,5 +1,6 @@
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 
 from app.api.route_utils import build_history_item, history_lookup_pipeline

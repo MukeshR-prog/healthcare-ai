@@ -3,6 +3,7 @@ import io
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import ValidationError
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 
 from app.api.route_utils import save_claim, save_prediction

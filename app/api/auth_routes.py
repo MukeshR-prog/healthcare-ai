@@ -1,5 +1,6 @@
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 
 from app.db.connection import get_database

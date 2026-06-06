@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 
 from app.db.connection import get_database

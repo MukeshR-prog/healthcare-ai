@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import HTTPException
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 from app.models.investigation import Investigation, InvestigationNote, InvestigationTimeline
 from app.repositories.investigation_repository import InvestigationRepository

@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 from app.models.report import Report, ReportTemplate, ReportExport, ScheduledReport
 
