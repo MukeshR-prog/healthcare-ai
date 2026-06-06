@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timezone
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 
 from app.models.document import Document, OCRExtraction, VerificationResult, DocumentNote

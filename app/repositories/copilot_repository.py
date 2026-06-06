@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 from app.models.copilot import CopilotConversation, CopilotMessage, CopilotInsight
 

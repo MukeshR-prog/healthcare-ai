@@ -8,6 +8,7 @@ from bson import ObjectId
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 
 from app.core.config import settings

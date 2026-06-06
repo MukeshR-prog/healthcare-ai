@@ -1,5 +1,6 @@
 from datetime import datetime
 from bson import ObjectId
+# pyrefly: ignore [missing-import]
 from pymongo.database import Database
 from app.models.audit_log import AuditLog
 
