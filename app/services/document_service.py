@@ -253,3 +253,16 @@ class DocumentService:
             # Insert corresponding Mock Verification Results
             verification = VerificationService.verify_extraction(db, extraction)
             DocumentRepository.save_verification(db, verification)
+
+    @staticmethod
+    def get_documents(
+        db: Database,
+        search: str = None,
+        status: str = None,
+        risk_level: str = None,
+        skip: int = 0,
+        limit: int = 100,
+        sort_by: str = "uploaded_at",
+        sort_dir: int = -1
+    ) -> tuple[int, list[dict]]:
+        return DocumentRepository.get_documents(db, search, status, risk_level, skip, limit, sort_by, sort_dir)

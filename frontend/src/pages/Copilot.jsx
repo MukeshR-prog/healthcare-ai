@@ -57,6 +57,15 @@ export default function Copilot() {
   const clearCopilotHistory = useStore((state) => state.clearCopilotHistory)
   const pinCopilotResponse = useStore((state) => state.pinCopilotResponse)
 
+  const copilotConversations = useStore((state) => state.copilotConversations || [])
+  const activeConversationId = useStore((state) => state.activeConversationId)
+  const copilotMetrics = useStore((state) => state.copilotMetrics)
+  const fetchCopilotConversations = useStore((state) => state.fetchCopilotConversations)
+  const fetchCopilotMessages = useStore((state) => state.fetchCopilotMessages)
+  const deleteCopilotConversation = useStore((state) => state.deleteCopilotConversation)
+  const fetchCopilotSuggestions = useStore((state) => state.fetchCopilotSuggestions)
+  const fetchCopilotMetrics = useStore((state) => state.fetchCopilotMetrics)
+
   const { fetchHistory } = useApi()
 
   // State Variables
@@ -70,29 +79,17 @@ export default function Copilot() {
   // Initial fetch on mount
   useEffect(() => {
     fetchHistory()
-  }, [fetchHistory])
+    fetchCopilotConversations()
+    fetchCopilotSuggestions()
+    fetchCopilotMetrics()
+  }, [fetchHistory, fetchCopilotConversations, fetchCopilotSuggestions, fetchCopilotMetrics])
 
   // Scroll to bottom on chats updates
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [copilotChats, isTyping])
 
-  // Initial welcome message if history is empty
-  useEffect(() => {
-    if (copilotChats.length === 0) {
-      sendCopilotMessage({
-        id: `msg-welcome`,
-        sender: 'assistant',
-        text: `Hello! I am your **AI Fraud Copilot**. I can help you analyze platform claims, check high-risk providers, summarize case investigations, audit document verification mismatches, and trace network clusters using natural language.\n\nTry selecting one of the suggested prompts below or ask me a custom question.`,
-        timestamp: new Date().toISOString(),
-        isPinned: false,
-        recommendations: [
-          { title: 'Show High-Risk Providers', query: 'Which provider has the highest fraud risk?' },
-          { title: 'List Critical Investigations', query: 'Show critical investigations.' }
-        ]
-      })
-    }
-  }, [copilotChats, sendCopilotMessage])
+
 
   // Compute live contextual analytics
   const copilotContext = useMemo(() => {
@@ -138,196 +135,19 @@ export default function Copilot() {
     }
   }, [history, alerts, cases, documents, providerWatchlist])
 
-  // Custom NLP / Regex Heuristics Engine
-  const processQuery = useCallback((queryText) => {
-    const text = queryText.toLowerCase()
-
-    let reply = ''
-    let recs = []
-    let insightData = {}
-
-    // Intent 1: Highest Fraud Risk / Compare Providers
-    if (text.includes('highest fraud risk') || text.includes('compare providers') || text.includes('riskiest provider') || text.includes('highest risk provider')) {
-      const highest = copilotContext.topProviders[0] || { name: 'Provider B', score: 82, claims: 24, amount: 320000 }
-      reply = `According to current audit logs, **${highest.name}** presents the highest composite fraud risk on the platform with a composite score of **${highest.score}% (Critical)**.
-
-This is driven by:
-- **Claims volume**: ${highest.claims} claims filed (totaling **${formatCurrency(highest.amount)}**).
-- **Flagged anomalies**: ${highest.fraudCount || 8} claims classified as high risk.
-- **Watchlist status**: ${providerWatchlist.includes(highest.name) ? 'Yes (Active Watchlist)' : 'No'}.
-
-*Recommendations*: Review current case history and audit billing codes.`
-      
-      recs = [
-        { title: `Audit ${highest.name} logs`, query: `Explain ${highest.name} risk score.` },
-        { title: 'Check verification mismatches', query: 'Show document verification mismatches.' }
-      ]
-      insightData = { type: 'provider', id: highest.name }
-    }
-
-    // Intent 2: Explain Provider specific risk score
-    else if (text.includes('explain provider')) {
-      // Extract provider name
-      const match = queryText.match(/explain provider\s+(\w+)/i)
-      const pName = match ? `Provider ${match[1]}` : 'Provider B'
-      const provObj = copilotContext.topProviders.find((p) => p.name.toLowerCase() === pName.toLowerCase()) || { name: pName, score: 75, claims: 15, amount: 180000, fraudCount: 4 }
-      
-      reply = `**Audit Risk Breakdown for ${provObj.name}**:
-- **Composite Risk Rating**: \`${provObj.score}%\` (Status: **${provObj.score >= 75 ? 'Critical' : 'High'}**)
-- **Billing volume**: ${provObj.claims} claims submitted (totaling **${formatCurrency(provObj.amount)}**)
-- **Algorithmic Flags**: ${provObj.fraudCount || 3} anomalies triggered by upcoding heuristics.
-
-*Key Risk Modifiers*:
-1. **Upcoding Flags**: Billing profile shows excessive num_procedures code clusters.
-2. **Alert Density**: Multiple alerts remain unassigned.
-3. **Analyst Flag**: ${providerFlags[provObj.name] ? `"${providerFlags[provObj.name]}"` : 'No analyst annotation registered.'}`
-
-      recs = [
-        { title: `Escalate ${provObj.name}`, query: `Summarize recent alerts.` },
-        { title: 'View Network Cluster', query: 'Show network clusters.' }
-      ]
-    }
-
-    // Intent 3: Show critical investigations / open cases
-    else if (text.includes('investigation') || text.includes('cases') || text.includes('show critical investigations')) {
-      const openCount = copilotContext.openCases.length
-      if (openCount === 0) {
-        reply = `There are currently **no active investigations** in the review queue. All cases are resolved or closed.`
-      } else {
-        const listText = copilotContext.openCases
-          .map((c) => `- **${c.id}**: Provider \`${c.provider}\` | Risk Score: \`${c.riskScore}%\` | Priority: \`${c.priority}\` | Status: \`${c.status}\` (Assigned: \`${c.assignedTo}\`)`)
-          .join('\n')
-        reply = `There are currently **${openCount} active investigations** registered in the database:
-
-${listText}
-
-Immediate action is recommended for critical priority cases.`
-      }
-      recs = [
-        { title: 'Summarize alerts', query: 'Summarize recent alerts.' },
-        { title: 'Show document mismatches', query: 'Show document verification mismatches.' }
-      ]
-    }
-
-    // Intent 4: Summarize alerts
-    else if (text.includes('summarize recent alerts') || text.includes('summarize alerts') || text.includes('alert summary')) {
-      const totalAlerts = alerts.length || 5
-      const critical = alerts.filter((a) => a.severity === 'Critical').length
-      const high = alerts.filter((a) => a.severity === 'High').length
-      const med = alerts.filter((a) => a.severity === 'Medium').length
-
-      reply = `**Fraud Alert Queue Summary**:
-Total Active Alerts: **${totalAlerts}**
-- **Critical Severity**: \`${critical || 1}\`
-- **High Severity**: \`${high || 2}\`
-- **Medium/Low**: \`${med || 2}\`
-
-Most critical alert triggers are related to **upcoding procedure count codes** and patient-provider distance warnings.`
-
-      recs = [
-        { title: 'Show riskiest provider', query: 'Which provider has the highest fraud risk?' },
-        { title: 'Check open investigations', query: 'Show critical investigations.' }
-      ]
-    }
-
-    // Intent 5: Show document mismatches
-    else if (text.includes('mismatch') || text.includes('document') || text.includes('document verification mismatches')) {
-      const docCount = copilotContext.mismatchDocs.length
-      if (docCount === 0) {
-        reply = `All OCR document verifications are currently **verified** with no major discrepancies found.`
-      } else {
-        const listText = copilotContext.mismatchDocs
-          .map((d) => `- **${d.id}** (${d.metadata?.type || d.type || 'UB-04'}): Claim \`${d.metadata?.claimId || d.claimId}\` | Status: **Mismatch** | Discrepancy: *"${d.metadata?.discrepancy || d.discrepancy || 'Billed codes mismatch OCR'}"*`)
-          .join('\n')
-        
-        reply = `Clinical Verification Engine has flagged **${docCount} billing document mismatches**:
-
-${listText}
-
-Recommendation: Escalate these claims for manual review.`
-      }
-      recs = [
-        { title: 'Verify claim details', query: 'Show critical investigations.' }
-      ]
-    }
-
-    // Intent 6: Fraud trends
-    else if (text.includes('fraud trends') || text.includes('trends') || text.includes('trends summary')) {
-      reply = `**Healthcare AI Platform Fraud Trends**:
-- **Baseline Anomaly Rate**: \`14.2%\` average across standard clinics.
-- **Average Flagged Claim**: \`$18,450\` (vs. \`$4,200\` average verified claims).
-- **Concentration Index**: Network nodes around **Provider B** and **Provider C** account for 68% of all flagged anomalies.
-- **Temporal Spike**: Upcoding flags rose by **4.5%** over the last 30 days.`
-      
-      recs = [
-        { title: 'Show network clusters', query: 'Show network clusters.' }
-      ]
-    }
-
-    // Intent 7: Network clusters
-    else if (text.includes('network clusters') || text.includes('clusters') || text.includes('show clusters')) {
-      reply = `**Network Analysis Grouping Summary**:
-1. **Provider B Cluster (9 nodes)**: Dense interconnection linking 3 claims, 3 alerts, 1 active case, and 2 document verification failures. Indicates potential upcoding network.
-2. **Provider C Cluster (6 nodes)**: Links 2 claims, 1 alert, and 1 case.
-
-*Audit Verdict*: Provider B cluster warrants immediate coordination between document verification and alert management teams.`
-      
-      recs = [
-        { title: 'Explain Provider B risk', query: 'Explain Provider B risk score.' }
-      ]
-    }
-
-    // Fallback response
-    else {
-      reply = `I've analyzed your question: "${queryText}". 
-
-To assist you better, you can query specific platform categories:
-- **Alerts**: "Summarize recent alerts"
-- **Investigations**: "Show critical investigations"
-- **Providers**: "Which provider has the highest fraud risk?" or "Explain Provider B risk score"
-- **Documents**: "Show document verification mismatches"
-- **Network Linkage**: "Show network clusters"`
-      recs = [
-        { title: 'Highest Fraud Risk', query: 'Which provider has the highest fraud risk?' },
-        { title: 'Critical Investigations', query: 'Show critical investigations.' }
-      ]
-    }
-
-    return { reply, recs, insightData }
-  }, [copilotContext, alerts, providerWatchlist, providerFlags])
-
   // Handle Send Message
-  const handleSendMessage = (text = inputValue) => {
+  const handleSendMessage = async (text = inputValue) => {
     if (!text.trim()) return
-
-    // 1. Add User Message
-    const userMsgId = `msg-${Date.now()}-user`
-    sendCopilotMessage({
-      id: userMsgId,
-      sender: 'user',
-      text: text.trim(),
-      timestamp: new Date().toISOString(),
-      isPinned: false
-    })
 
     setInputValue('')
     setIsTyping(true)
-
-    // 2. Simulate AI thinking / typing loader delay
-    setTimeout(() => {
-      const { reply, recs, insightData } = processQuery(text)
-      
-      sendCopilotMessage({
-        id: `msg-${Date.now()}-assistant`,
-        sender: 'assistant',
-        text: reply,
-        timestamp: new Date().toISOString(),
-        isPinned: false,
-        recommendations: recs,
-        insightData
-      })
+    try {
+      await sendCopilotMessage(text.trim())
+    } catch (err) {
+      console.error("Failed to send message:", err)
+    } finally {
       setIsTyping(false)
-    }, 1200)
+    }
   }
 
   // Handle Enter Key Press
@@ -443,7 +263,42 @@ Executive Recommendation: ${c.priority === 'Critical' || c.priority === 'High' ?
           </p>
         </div>
 
-        <div className='flex gap-2 self-center shrink-0'>
+        <div className='flex flex-wrap items-center gap-2 self-center shrink-0'>
+          <div className='flex items-center gap-1.5'>
+            <select
+              value={activeConversationId || ''}
+              onChange={(e) => {
+                const val = e.target.value
+                if (val) {
+                  fetchCopilotMessages(val)
+                } else {
+                  clearCopilotHistory()
+                }
+              }}
+              className='rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-850 transition shadow-xs outline-hidden'
+            >
+              <option value=''>-- New Conversation --</option>
+              {copilotConversations.map((conv) => (
+                <option key={conv.conversationId} value={conv.conversationId}>
+                  {conv.title || `Chat ${conv.conversationId.slice(0, 8)}...`}
+                </option>
+              ))}
+            </select>
+            {activeConversationId && (
+              <button
+                type='button'
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this conversation?")) {
+                    deleteCopilotConversation(activeConversationId)
+                  }
+                }}
+                className='inline-flex items-center justify-center p-2 rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-850 transition shadow-xs'
+                title='Delete Active Conversation'
+              >
+                <Trash2 className='h-3.5 w-3.5' />
+              </button>
+            )}
+          </div>
           <button
             type='button'
             onClick={handleExportChat}
@@ -465,52 +320,52 @@ Executive Recommendation: ${c.priority === 'Critical' || c.priority === 'High' ?
       <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4 no-print'>
         <div className='relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-950/80'>
           <div className='flex items-center justify-between'>
-            <p className='text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-500'>Total Queries</p>
+            <p className='text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-550'>Total Queries</p>
             <div className='grid h-8 w-8 place-items-center rounded-xl bg-sky-500/10 text-sky-600 dark:bg-sky-950/40 dark:text-sky-400'>
               <Sparkles className='h-4 w-4 animate-pulse' />
             </div>
           </div>
           <p className='font-display text-2xl font-bold text-slate-900 dark:text-slate-100 mt-3'>
-            {copilotContext.totalQueries}
+            {copilotMetrics?.totalQueries ?? 0}
           </p>
           <p className='text-[10px] text-slate-400 font-semibold mt-1.5'>Conversations recorded this session</p>
         </div>
 
         <div className='relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-950/80'>
           <div className='flex items-center justify-between'>
-            <p className='text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-500'>Pinned Insights</p>
+            <p className='text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-550'>Pinned Insights</p>
             <div className='grid h-8 w-8 place-items-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400'>
               <Pin className='h-4 w-4' />
             </div>
           </div>
           <p className='font-display text-2xl font-bold text-slate-900 dark:text-slate-100 mt-3'>
-            {copilotChats.filter((c) => c.isPinned).length}
+            {copilotMetrics?.pinnedInsights ?? 0}
           </p>
           <p className='text-[10px] text-slate-400 font-semibold mt-1.5'>Flagged key-knowledge items</p>
         </div>
 
         <div className='relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-950/80'>
           <div className='flex items-center justify-between'>
-            <p className='text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-500'>Open Investigations</p>
+            <p className='text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-550'>Open Investigations</p>
             <div className='grid h-8 w-8 place-items-center rounded-xl bg-purple-500/10 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400'>
               <Layers className='h-4 w-4' />
             </div>
           </div>
           <p className='font-display text-2xl font-bold text-slate-900 dark:text-slate-100 mt-3'>
-            {copilotContext.openCases.length}
+            {copilotMetrics?.openInvestigations ?? 0}
           </p>
           <p className='text-[10px] text-slate-400 font-semibold mt-1.5'>Active cases in store registry</p>
         </div>
 
         <div className='relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-950/80'>
           <div className='flex items-center justify-between'>
-            <p className='text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-500'>High Risk Alerts</p>
-            <div className='grid h-8 w-8 place-items-center rounded-xl bg-rose-500/10 text-rose-600 dark:bg-rose-950/40 dark:text-rose-450'>
+            <p className='text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-550'>High Risk Alerts</p>
+            <div className='grid h-8 w-8 place-items-center rounded-xl bg-rose-500/10 text-rose-600 dark:bg-rose-950/40 dark:text-rose-455'>
               <ShieldAlert className='h-4 w-4' />
             </div>
           </div>
           <p className='font-display text-2xl font-bold text-slate-900 dark:text-slate-100 mt-3'>
-            {copilotContext.criticalAlerts.length}
+            {copilotMetrics?.highRiskAlerts ?? 0}
           </p>
           <p className='text-[10px] text-slate-400 font-semibold mt-1.5'>Alerts labeled critical severity</p>
         </div>
@@ -547,6 +402,17 @@ Executive Recommendation: ${c.priority === 'Critical' || c.priority === 'High' ?
 
           {/* Chat Feed Messages Scroll Box */}
           <div className='flex-1 overflow-y-auto p-4 space-y-4 scrollbar-none'>
+            {copilotChats.length === 0 && (
+              <div className='flex items-start gap-3.5 max-w-[85%] mr-auto'>
+                <div className='grid h-8 w-8 place-items-center rounded-xl bg-sky-500/10 text-sky-600 border border-sky-500/20 shadow-xs shrink-0'>
+                  <Bot className='h-4 w-4' />
+                </div>
+                <div className='rounded-2xl p-3.5 text-xs leading-relaxed border shadow-xs bg-sky-500/5 border-sky-500/10 text-slate-700 dark:bg-slate-950/20 dark:text-slate-300'>
+                  <p className='font-bold mb-1 text-slate-900 dark:text-white'>Welcome to the AI Fraud Copilot Center!</p>
+                  <p>Query platform statistics using natural language, compile auto-investigation summaries, analyze upcoding fraud alerts, and receive operational audit recommendations.</p>
+                </div>
+              </div>
+            )}
             {copilotChats.map((msg) => {
               const isUser = msg.sender === 'user'
               return (

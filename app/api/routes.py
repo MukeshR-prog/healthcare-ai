@@ -11,6 +11,7 @@ from app.api.provider_routes import router as provider_router
 from app.api.document_routes import router as document_router
 from app.api.explainability_routes import router as explainability_router
 from app.api.report_routes import router as report_router
+from app.api.copilot_routes import router as copilot_router
 
 router = APIRouter()
 
@@ -25,3 +26,4 @@ router.include_router(provider_router)
 router.include_router(document_router)
 router.include_router(explainability_router)
 router.include_router(report_router)
+router.include_router(copilot_router)

@@ -112,4 +112,18 @@ def ensure_collections_and_indexes(db: Database) -> None:
     db["scheduled_reports"].create_index("frequency")
     db["scheduled_reports"].create_index("enabled")
 
+    # Copilot Service collections
+    if "copilot_conversations" not in existing:
+        db.create_collection("copilot_conversations")
+    if "copilot_messages" not in existing:
+        db.create_collection("copilot_messages")
+    if "copilot_insights" not in existing:
+        db.create_collection("copilot_insights")
+
+    db["copilot_conversations"].create_index("user_id")
+    db["copilot_conversations"].create_index("conversation_id", unique=True)
+    db["copilot_messages"].create_index("conversation_id")
+    db["copilot_insights"].create_index("conversation_id")
+    db["copilot_insights"].create_index("insight_type")
+
 
