@@ -255,3 +255,7 @@ class ExplainabilityService:
             )
             
         return synced_count
+
+    @staticmethod
+    def get_explanations(db: Database, skip: int = 0, limit: int = 100) -> list[dict]:
+        return ExplainabilityRepository.get_explanations(db, skip, limit)

@@ -239,3 +239,16 @@ class ProviderService:
         result_list = list(merged.values())
         result_list.sort(key=lambda x: x["month"])
         return result_list
+
+    @staticmethod
+    def get_providers(
+        db: Database,
+        search: str = None,
+        watchlisted: bool = None,
+        risk_level: str = None,
+        skip: int = 0,
+        limit: int = 100,
+        sort_by: str = "riskScore",
+        sort_dir: int = -1
+    ) -> tuple[int, list[dict]]:
+        return ProviderRepository.get_providers(db, search, watchlisted, risk_level, skip, limit, sort_by, sort_dir)

@@ -105,6 +105,12 @@ export const healthcareApi = {
   getSchedules: () => api.get('/api/reports/schedules'),
   createSchedule: (payload) => api.post('/api/reports/schedules', payload),
   getAuditLogs: () => api.get('/api/audit/activity-feed'),
+  sendCopilotMessage: (payload) => api.post('/api/copilot/chat', payload),
+  getCopilotConversations: () => api.get('/api/copilot/conversations'),
+  getCopilotMessages: (conversationId) => api.get(`/api/copilot/conversations/${conversationId}`),
+  deleteCopilotConversation: (conversationId) => api.delete(`/api/copilot/conversations/${conversationId}`),
+  getCopilotSuggestions: () => api.get('/api/copilot/suggestions'),
+  getCopilotMetrics: () => api.get('/api/copilot/metrics'),
 }
 
 export default api

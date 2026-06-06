@@ -324,3 +324,18 @@ class InvestigationService:
             performed_by=operator_email,
             metadata={"source": "investigation_service"}
         )
+
+    @staticmethod
+    def get_cases(
+        db: Database,
+        search: str = None,
+        status: str = None,
+        priority: str = None,
+        assigned_to: str = None,
+        skip: int = 0,
+        limit: int = 100,
+        sort_by: str = "created_at",
+        sort_dir: int = -1
+    ) -> tuple[int, list]:
+        from app.repositories.investigation_repository import InvestigationRepository
+        return InvestigationRepository.get_cases(db, search, status, priority, assigned_to, skip, limit, sort_by, sort_dir)

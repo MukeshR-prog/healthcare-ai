@@ -143,3 +143,16 @@ class AlertService:
             performed_by=operator_email,
             metadata={"source": "alert_service"}
         )
+
+    @staticmethod
+    def get_alerts(
+        db: Database,
+        search: str = None,
+        status: str = None,
+        severity: str = None,
+        skip: int = 0,
+        limit: int = 100,
+        sort_by: str = "created_at",
+        sort_dir: int = -1
+    ) -> tuple[int, list]:
+        return AlertRepository.get_alerts(db, search, status, severity, skip, limit, sort_by, sort_dir)

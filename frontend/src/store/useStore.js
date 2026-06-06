@@ -100,6 +100,9 @@ export const useStore = create(
       auditLogs: [],
       schedules: [],
       dashboardMetrics: null,
+      copilotConversations: [],
+      activeConversationId: null,
+      copilotMetrics: null,
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -476,17 +479,124 @@ export const useStore = create(
           delete next[entityId]
           return { networkAnnotations: next }
         }),
-      sendCopilotMessage: (message) =>
-        set((state) => ({
-          copilotChats: [...state.copilotChats, message],
-        })),
+      sendCopilotMessage: async (query) => {
+        try {
+          const state = get()
+          const conversationId = state.activeConversationId
+          
+          // Append temporary user message
+          const tempUserMsg = {
+            id: `msg-${Date.now()}-user`,
+            sender: 'user',
+            text: query,
+            timestamp: new Date().toISOString(),
+            isPinned: false
+          }
+          set((state) => ({
+            copilotChats: [...state.copilotChats, tempUserMsg]
+          }))
+
+          const response = await healthcareApi.sendCopilotMessage({
+            message: query,
+            conversationId: conversationId
+          })
+          
+          if (response && response.data) {
+            const { conversationId: newConvId, response: assistantMsg } = response.data
+            const mappedAssistantMsg = {
+              id: assistantMsg.id || assistantMsg._id,
+              sender: assistantMsg.sender,
+              text: assistantMsg.text,
+              timestamp: assistantMsg.timestamp,
+              isPinned: assistantMsg.is_pinned || assistantMsg.isPinned,
+              recommendations: assistantMsg.recommendations || [],
+              insightData: assistantMsg.insightData || {}
+            }
+            
+            set((state) => ({
+              activeConversationId: newConvId,
+              copilotChats: [...state.copilotChats, mappedAssistantMsg]
+            }))
+            
+            // Reload list and metrics
+            useStore.getState().fetchCopilotConversations()
+            useStore.getState().fetchCopilotMetrics()
+            
+            return { conversationId: newConvId, response: mappedAssistantMsg }
+          }
+        } catch (error) {
+          console.error("Failed to send copilot message:", error)
+        }
+      },
+      fetchCopilotConversations: async () => {
+        try {
+          const res = await healthcareApi.getCopilotConversations()
+          set({ copilotConversations: res.data })
+        } catch (err) {
+          console.error("Failed to fetch copilot conversations:", err)
+        }
+      },
+      fetchCopilotMessages: async (conversationId) => {
+        try {
+          const res = await healthcareApi.getCopilotMessages(conversationId)
+          const mappedMsgs = res.data.map(msg => ({
+            id: msg.id || msg._id,
+            sender: msg.sender,
+            text: msg.text,
+            timestamp: msg.timestamp,
+            isPinned: msg.is_pinned || msg.isPinned,
+            recommendations: msg.recommendations || [],
+            insightData: msg.insightData || {}
+          }))
+          set({
+            copilotChats: mappedMsgs,
+            activeConversationId: conversationId
+          })
+        } catch (err) {
+          console.error("Failed to fetch copilot messages:", err)
+        }
+      },
+      deleteCopilotConversation: async (conversationId) => {
+        try {
+          await healthcareApi.deleteCopilotConversation(conversationId)
+          set((state) => {
+            const nextConvs = state.copilotConversations.filter(c => c.conversationId !== conversationId)
+            const isCurrent = state.activeConversationId === conversationId
+            return {
+              copilotConversations: nextConvs,
+              activeConversationId: isCurrent ? null : state.activeConversationId,
+              copilotChats: isCurrent ? [] : state.copilotChats
+            }
+          })
+          toast.success("Conversation deleted.")
+          useStore.getState().fetchCopilotMetrics()
+        } catch (err) {
+          console.error("Failed to delete copilot conversation:", err)
+        }
+      },
+      fetchCopilotSuggestions: async () => {
+        try {
+          const res = await healthcareApi.getCopilotSuggestions()
+          set({ copilotSuggestions: res.data })
+        } catch (err) {
+          console.error("Failed to fetch copilot suggestions:", err)
+        }
+      },
+      fetchCopilotMetrics: async () => {
+        try {
+          const res = await healthcareApi.getCopilotMetrics()
+          set({ copilotMetrics: res.data })
+        } catch (err) {
+          console.error("Failed to fetch copilot metrics:", err)
+        }
+      },
       saveCopilotQuery: (query) =>
         set((state) => {
           const exists = state.savedQueries.some((q) => q.text === query.text)
           if (exists) return {}
           return { savedQueries: [query, ...state.savedQueries] }
         }),
-      clearCopilotHistory: () => set({ copilotChats: [] }),
+      clearCopilotHistory: () => set({ copilotChats: [], activeConversationId: null }),
       pinCopilotResponse: (messageId) =>
         set((state) => ({
           copilotChats: state.copilotChats.map((c) =>

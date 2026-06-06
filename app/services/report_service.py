@@ -302,3 +302,8 @@ class ReportService:
         )
         
         return report
+
+    @staticmethod
+    def get_reports(db: Database, skip: int = 0, limit: int = 100) -> list[dict]:
+        from app.repositories.report_repository import ReportRepository
+        return ReportRepository.get_reports(db, skip, limit)
