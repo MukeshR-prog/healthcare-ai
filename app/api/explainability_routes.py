@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from bson import ObjectId
 # pyrefly: ignore [missing-import]
 from pymongo.database import Database
 from app.db.connection import get_database
@@ -69,6 +70,22 @@ def get_explanation_endpoint(
 ):
     explanation = ExplainabilityRepository.get_explanation(db, prediction_id)
     if not explanation:
+        pred = db["predictions"].find_one({"_id": ObjectId(prediction_id)}) if ObjectId.is_valid(prediction_id) else db["predictions"].find_one({"id": prediction_id})
+        if pred:
+            claim_id = pred.get("claim_id")
+            is_fraud = pred.get("prediction") == 1
+            confidence = pred.get("confidence") or 0.5
+            ExplainabilityService.generate_explanation(
+                db=db,
+                prediction_id=prediction_id,
+                claim_id=str(claim_id),
+                is_fraud=is_fraud,
+                confidence=confidence,
+                operator_email=current_user.get("email", "system")
+            )
+            explanation = ExplainabilityRepository.get_explanation(db, prediction_id)
+            
+    if not explanation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Explanation not found."
@@ -93,6 +110,23 @@ def get_feature_contributions_endpoint(
     db: Database = Depends(get_database),
     current_user: dict = auth_dependency
 ):
+    features = ExplainabilityRepository.get_feature_contributions(db, prediction_id)
+    if not features:
+        pred = db["predictions"].find_one({"_id": ObjectId(prediction_id)}) if ObjectId.is_valid(prediction_id) else db["predictions"].find_one({"id": prediction_id})
+        if pred:
+            claim_id = pred.get("claim_id")
+            is_fraud = pred.get("prediction") == 1
+            confidence = pred.get("confidence") or 0.5
+            ExplainabilityService.generate_explanation(
+                db=db,
+                prediction_id=prediction_id,
+                claim_id=str(claim_id),
+                is_fraud=is_fraud,
+                confidence=confidence,
+                operator_email=current_user.get("email", "system")
+            )
+            features = ExplainabilityRepository.get_feature_contributions(db, prediction_id)
+            
     # Log Insight Viewed Event
     AuditService.log_event(
         db=db,
@@ -103,7 +137,6 @@ def get_feature_contributions_endpoint(
         description=f"SHAP feature contributions list viewed for prediction {prediction_id}.",
         performed_by=current_user.get("email", "system")
     )
-    features = ExplainabilityRepository.get_feature_contributions(db, prediction_id)
     return features
 
 
@@ -114,6 +147,22 @@ def get_prediction_insights_endpoint(
     current_user: dict = auth_dependency
 ):
     insight = ExplainabilityRepository.get_prediction_insights(db, prediction_id)
+    if not insight:
+        pred = db["predictions"].find_one({"_id": ObjectId(prediction_id)}) if ObjectId.is_valid(prediction_id) else db["predictions"].find_one({"id": prediction_id})
+        if pred:
+            claim_id = pred.get("claim_id")
+            is_fraud = pred.get("prediction") == 1
+            confidence = pred.get("confidence") or 0.5
+            ExplainabilityService.generate_explanation(
+                db=db,
+                prediction_id=prediction_id,
+                claim_id=str(claim_id),
+                is_fraud=is_fraud,
+                confidence=confidence,
+                operator_email=current_user.get("email", "system")
+            )
+            insight = ExplainabilityRepository.get_prediction_insights(db, prediction_id)
+            
     if not insight:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
