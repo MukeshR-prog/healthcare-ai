@@ -56,7 +56,7 @@ const mapBackendVerification = (d) => {
 
 export const useStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       theme: 'system',
       loading: false,
       loadingByKey: {},
