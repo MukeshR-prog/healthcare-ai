@@ -24,6 +24,12 @@ def ensure_collections_and_indexes(db: Database) -> None:
         db.create_collection("investigation_timeline")
     if "providers" not in existing:
         db.create_collection("providers")
+    if "knowledge_documents" not in existing:
+        db.create_collection("knowledge_documents")
+    if "knowledge_chunks" not in existing:
+        db.create_collection("knowledge_chunks")
+    if "embeddings" not in existing:
+        db.create_collection("embeddings")
 
     db["claims"].create_index("created_at")
     db["claims"].create_index("user_id")
@@ -54,6 +60,13 @@ def ensure_collections_and_indexes(db: Database) -> None:
     db["investigations"].create_index("created_at")
     db["investigation_notes"].create_index("case_id")
     db["investigation_timeline"].create_index("case_id")
+
+    db["knowledge_documents"].create_index("source_type")
+    db["knowledge_documents"].create_index("source_id")
+    db["knowledge_documents"].create_index("created_at")
+    db["knowledge_chunks"].create_index("document_id")
+    db["knowledge_chunks"].create_index("embedding_status")
+    db["embeddings"].create_index("chunk_id")
 
     # Document Verification Service collections
     if "documents" not in existing:
