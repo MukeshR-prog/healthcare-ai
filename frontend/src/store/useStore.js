@@ -103,6 +103,7 @@ export const useStore = create(
       copilotConversations: [],
       activeConversationId: null,
       copilotMetrics: null,
+      ragStats: null,
       setTheme: (theme) => set({ theme }),
       setLoading: (loading) => set({ loading }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -597,12 +598,33 @@ export const useStore = create(
           return { savedQueries: [query, ...state.savedQueries] }
         }),
       clearCopilotHistory: () => set({ copilotChats: [], activeConversationId: null }),
-      pinCopilotResponse: (messageId) =>
+       pinCopilotResponse: (messageId) =>
         set((state) => ({
           copilotChats: state.copilotChats.map((c) =>
             c.id === messageId ? { ...c, isPinned: !c.isPinned } : c
           ),
         })),
+      fetchRAGStats: async () => {
+        try {
+          const res = await healthcareApi.ragStats()
+          set({ ragStats: res.data })
+        } catch (err) {
+          console.error("Failed to fetch RAG stats:", err)
+        }
+      },
+      reindexRAG: async () => {
+        try {
+          toast.loading("Reindexing RAG Knowledge Base...")
+          const res = await healthcareApi.ragReindex()
+          set({ ragStats: res.data })
+          toast.dismiss()
+          toast.success("RAG Knowledge Base reindexed successfully!")
+        } catch (err) {
+          toast.dismiss()
+          console.error("Failed to reindex RAG:", err)
+          toast.error("Failed to reindex RAG Knowledge Base.")
+        }
+      },
       fetchReports: async () => {
         try {
           const res = await healthcareApi.getReports()
