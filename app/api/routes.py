@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter
 
 from app.api.analytics_routes import router as analytics_router
