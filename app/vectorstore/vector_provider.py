@@ -33,7 +33,7 @@ class FAISSProvider(VectorProvider):
             import faiss
             self._use_fallback = False
             self._rebuild_faiss()
-        except ImportError:
+        except Exception:
             self._use_fallback = True
 
     def _rebuild_faiss(self):

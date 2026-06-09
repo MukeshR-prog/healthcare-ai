@@ -1,10 +1,19 @@
 from datetime import datetime, timezone
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated
+from bson import ObjectId
+from pydantic import BaseModel, ConfigDict, Field, BeforeValidator
+
+def coerce_objectid(v):
+    if isinstance(v, ObjectId):
+        return str(v)
+    return v
+
+PyObjectId = Annotated[str, BeforeValidator(coerce_objectid)]
 
 class CopilotConversation(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    id: str | None = Field(default=None, alias="_id")
+    id: PyObjectId | None = Field(default=None, alias="_id")
     conversation_id: str
     user_id: str
     title: str
@@ -14,7 +23,7 @@ class CopilotConversation(BaseModel):
 class CopilotMessage(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    id: str | None = Field(default=None, alias="_id")
+    id: PyObjectId | None = Field(default=None, alias="_id")
     conversation_id: str
     sender: str  # user | assistant
     message: str
@@ -26,7 +35,7 @@ class CopilotMessage(BaseModel):
 class CopilotInsight(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    id: str | None = Field(default=None, alias="_id")
+    id: PyObjectId | None = Field(default=None, alias="_id")
     conversation_id: str
     insight_type: str
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

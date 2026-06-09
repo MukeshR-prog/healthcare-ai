@@ -51,7 +51,7 @@ class SentenceTransformersEmbeddingProvider(EmbeddingProvider):
             from sentence_transformers import SentenceTransformer
             self.model = SentenceTransformer(self.model_name)
             self._initialized = True
-        except ImportError:
+        except Exception:
             self._use_fallback = True
 
     def embed_query(self, text: str) -> list[float]:
@@ -82,7 +82,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             try:
                 import openai
                 self.client = openai.OpenAI(api_key=api_key)
-            except ImportError:
+            except Exception:
                 pass
 
     def embed_query(self, text: str) -> list[float]:
@@ -116,7 +116,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
                 self.has_sdk = True
-            except ImportError:
+            except Exception:
                 pass
 
     def embed_query(self, text: str) -> list[float]:
