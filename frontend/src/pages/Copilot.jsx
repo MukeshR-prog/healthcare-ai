@@ -65,6 +65,10 @@ export default function Copilot() {
   const deleteCopilotConversation = useStore((state) => state.deleteCopilotConversation)
   const fetchCopilotSuggestions = useStore((state) => state.fetchCopilotSuggestions)
   const fetchCopilotMetrics = useStore((state) => state.fetchCopilotMetrics)
+  const user = useStore((state) => state.auth?.user)
+  const ragStats = useStore((state) => state.ragStats)
+  const fetchRAGStats = useStore((state) => state.fetchRAGStats)
+  const reindexRAG = useStore((state) => state.reindexRAG)
 
   const { fetchHistory } = useApi()
 
@@ -82,7 +86,8 @@ export default function Copilot() {
     fetchCopilotConversations()
     fetchCopilotSuggestions()
     fetchCopilotMetrics()
-  }, [fetchHistory, fetchCopilotConversations, fetchCopilotSuggestions, fetchCopilotMetrics])
+    fetchRAGStats()
+  }, [fetchHistory, fetchCopilotConversations, fetchCopilotSuggestions, fetchCopilotMetrics, fetchRAGStats])
 
   // Scroll to bottom on chats updates
   useEffect(() => {
@@ -391,13 +396,24 @@ Executive Recommendation: ${c.priority === 'Critical' || c.priority === 'High' ?
               </div>
             </div>
 
-            <button
-              onClick={clearCopilotHistory}
-              className='p-1.5 hover:bg-slate-100 text-slate-400 hover:text-rose-600 rounded-lg text-xs font-semibold transition flex items-center gap-1 dark:hover:bg-slate-850'
-              title='Reset Chat Logs'
-            >
-              <Trash2 className='h-4 w-4' /> Clear Log
-            </button>
+            <div className='flex items-center gap-1.5'>
+              {user?.role === 'Admin' && (
+                <button
+                  onClick={reindexRAG}
+                  className='p-1.5 hover:bg-slate-100 text-slate-400 hover:text-sky-600 rounded-lg text-xs font-semibold transition flex items-center gap-1 dark:hover:bg-slate-850'
+                  title={`Rebuild semantic RAG index. Stats: ${ragStats?.documents || 0} docs, ${ragStats?.chunks || 0} chunks.`}
+                >
+                  <RefreshCw className='h-3.5 w-3.5' /> Reindex RAG
+                </button>
+              )}
+              <button
+                onClick={clearCopilotHistory}
+                className='p-1.5 hover:bg-slate-100 text-slate-400 hover:text-rose-600 rounded-lg text-xs font-semibold transition flex items-center gap-1 dark:hover:bg-slate-850'
+                title='Reset Chat Logs'
+              >
+                <Trash2 className='h-3.5 w-3.5' /> Clear Log
+              </button>
+            </div>
           </div>
 
           {/* Chat Feed Messages Scroll Box */}
@@ -459,6 +475,35 @@ Executive Recommendation: ${c.priority === 'Critical' || c.priority === 'High' ?
                           return <p key={lIdx} className='mt-1'>{line}</p>
                         })}
                       </div>
+
+                      {/* Semantic RAG citations */}
+                      {!isUser && msg.insightData?.sources && msg.insightData.sources.length > 0 && (
+                        <div className='mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5 no-print'>
+                          <p className='text-[9px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider flex items-center gap-1'>
+                            <BookmarkCheck className='h-3 w-3 text-sky-500 animate-pulse' />
+                            Verified Knowledge Citations
+                          </p>
+                          <div className='grid gap-1.5 grid-cols-1 sm:grid-cols-2 mt-1'>
+                            {msg.insightData.sources.map((src, sIdx) => (
+                              <div
+                                key={sIdx}
+                                className='p-2 rounded-xl bg-slate-50/50 hover:bg-slate-100/50 border border-slate-150/80 dark:bg-slate-900/60 dark:hover:bg-slate-900 dark:border-slate-850 transition flex flex-col gap-1 text-[9px]'
+                                title={src.content}
+                              >
+                                <div className='flex items-center justify-between font-bold text-slate-800 dark:text-slate-200'>
+                                  <span className='truncate max-w-[120px]'>{src.title}</span>
+                                  <Badge className='px-1 py-0 bg-sky-500/10 text-sky-600 border-none font-bold text-[8px] scale-95 shrink-0'>
+                                    {Math.round(src.confidence_score * 100)}% Match
+                                  </Badge>
+                                </div>
+                                <p className='text-slate-450 dark:text-slate-400 font-semibold truncate'>
+                                  Source: <span className='text-sky-500 dark:text-sky-400'>{src.source_type} ({src.source_id})</span>
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Associated suggested follow-up queries or action recomendations */}
                       {!isUser && msg.recommendations && msg.recommendations.length > 0 && (

@@ -111,6 +111,10 @@ export const healthcareApi = {
   deleteCopilotConversation: (conversationId) => api.delete(`/api/copilot/conversations/${conversationId}`),
   getCopilotSuggestions: () => api.get('/api/copilot/suggestions'),
   getCopilotMetrics: () => api.get('/api/copilot/metrics'),
+  ragSearch: (payload) => api.post('/api/rag/search', payload),
+  ragAsk: (payload) => api.post('/api/rag/ask', payload),
+  ragReindex: () => api.post('/api/rag/reindex'),
+  ragStats: () => api.get('/api/rag/stats'),
 }
 
 export default api

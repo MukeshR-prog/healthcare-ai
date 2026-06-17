@@ -98,36 +98,84 @@ class CopilotService:
         )
 
         # 3. Build context & generate reply
-        context = ContextService.build_copilot_context(db)
-        intent = cls.classify_intent(query)
-        prompt = PromptService.build_prompt(intent, context, query)
+        from app.services.retrieval_service import RetrievalService
+        results = RetrievalService.retrieve_context(db, query, limit=5)
         
         provider = get_llm_provider()
-        reply, recs, insight_data = provider.generate(prompt, context, query, intent)
+        
+        if results:
+            context_str = "--- SEMANTIC RETRIEVED CONTEXT ---\n"
+            for idx, r in enumerate(results):
+                context_str += f"[{idx + 1}] Source: {r['source_type']} ({r['source_id']}) - {r['title']} (Confidence: {r['confidence_score']:.2f})\n"
+                context_str += f"Content: {r['content']}\n\n"
+            context_str += "----------------------------------\n\n"
+            
+            system_instruction = (
+                "You are the Healthcare AI Fraud Copilot, a context-aware AI fraud analyst assisting investigators. "
+                "Answer the user's question using the retrieved semantic context. "
+                "Ensure your response is highly detailed, professional, and uses the facts presented in the context. "
+                "Always cite your sources by referencing their Source Type and Source ID (e.g. '[ocr_document (DOC-1001)]').\n\n"
+            )
+            prompt = f"{system_instruction}{context_str}User Request: {query}\n\nAI Response:"
+            intent = "RAG Contextual Analysis"
+            reply, recs, insight_data = provider.generate(prompt, {}, query, intent)
+            if not insight_data:
+                insight_data = {}
+            insight_data["sources"] = results
+            
+            # 4. Persist assistant message
+            assistant_message = CopilotMessage(
+                conversation_id=conversation_id,
+                sender="assistant",
+                message=reply,
+                created_at=datetime.now(timezone.utc),
+                recommendations=recs,
+                insight_data=insight_data
+            )
+            msg_id = CopilotRepository.save_message(db, assistant_message)
+            assistant_message.id = msg_id
 
-        # 4. Persist assistant message
-        assistant_message = CopilotMessage(
-            conversation_id=conversation_id,
-            sender="assistant",
-            message=reply,
-            created_at=datetime.now(timezone.utc),
-            recommendations=recs,
-            insight_data=insight_data
-        )
-        msg_id = CopilotRepository.save_message(db, assistant_message)
-        assistant_message.id = msg_id
+            # Log COPILOT_RAG_RESPONSE_GENERATED
+            AuditService.log_event(
+                db=db,
+                event_type="COPILOT_RAG_RESPONSE_GENERATED",
+                entity_type="COPILOT",
+                entity_id=conversation_id,
+                action="CREATE",
+                description="AI Fraud Copilot response generated using semantic RAG context.",
+                performed_by="system",
+                metadata={"query": query, "sources_count": len(results)}
+            )
+        else:
+            # Fallback to general database context
+            context = ContextService.build_copilot_context(db)
+            intent = cls.classify_intent(query)
+            prompt = PromptService.build_prompt(intent, context, query)
+            reply, recs, insight_data = provider.generate(prompt, context, query, intent)
+            
+            # 4. Persist assistant message
+            assistant_message = CopilotMessage(
+                conversation_id=conversation_id,
+                sender="assistant",
+                message=reply,
+                created_at=datetime.now(timezone.utc),
+                recommendations=recs,
+                insight_data=insight_data
+            )
+            msg_id = CopilotRepository.save_message(db, assistant_message)
+            assistant_message.id = msg_id
 
-        # Log COPILOT_RESPONSE_GENERATED
-        AuditService.log_event(
-            db=db,
-            event_type="COPILOT_RESPONSE_GENERATED",
-            entity_type="COPILOT",
-            entity_id=conversation_id,
-            action="CREATE",
-            description="AI Fraud Copilot response generated.",
-            performed_by="system",
-            metadata={"intent": intent}
-        )
+            # Log COPILOT_RESPONSE_GENERATED
+            AuditService.log_event(
+                db=db,
+                event_type="COPILOT_RESPONSE_GENERATED",
+                entity_type="COPILOT",
+                entity_id=conversation_id,
+                action="CREATE",
+                description="AI Fraud Copilot response generated.",
+                performed_by="system",
+                metadata={"intent": intent}
+            )
 
         # 5. Persist Copilot Insight if generated
         if insight_data:
